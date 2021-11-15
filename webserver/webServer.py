@@ -1,5 +1,6 @@
-from flask import Flask , render_template , request
+from flask import Flask , render_template , request, send_file
 import subprocess
+import os
 
 app = Flask(__name__)
 
@@ -13,7 +14,6 @@ def index():
 		file1.save('files\\file1.txt')
 		file2.save('files\\file2.txt')
 
-		subprocess.check_call(["exe\\lcs_a_blocchi_parallel.exe",'files\\file1.txt', 'files\\file2.txt', "5"])
+		subprocess.check_call(["exe\\Substring.exe",'files\\file1.txt', 'files\\file2.txt', "5", "files\\result.txt"]) #da aggiustare nome risultato
 
-	return render_template('index.html')
-
+	return render_template("index.html")
