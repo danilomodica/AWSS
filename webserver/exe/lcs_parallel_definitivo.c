@@ -99,7 +99,7 @@ int main (int argc, char *argv[]) {
    	int n_tondo, m_tondo, block_size;
 	FILE* fin1, * fin2, * result;
 
-    if(argc != 4) { //file1.txt file2.txt matrix_block_size
+    if(argc != 5) { //file1.txt file2.txt matrix_block_size
 		printf("\033[31;1m Wrong parameters! \033[0m\n");    	
 		return -1;
 	}
@@ -120,7 +120,7 @@ int main (int argc, char *argv[]) {
 
     s=lcs(a, n_tondo, b, m_tondo, s, block_size);
 
-	result = fopen("res_output.txt", "w");
+	result = fopen(argv[4], "w");
 	fprintf(result, "%s", s);
 
 	free(a);
