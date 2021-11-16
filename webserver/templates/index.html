@@ -33,7 +33,7 @@
   <header id="header" class="header fixed-top">
     <div class="container-fluid container-xl d-flex align-items-center justify-content-between">
 
-      <a href="index.html" class="logo d-flex align-items-center">
+      <a href="/" class="logo d-flex align-items-center">
         <img src="../static/img/logo.png" alt="">
         <span>AWSS</span>
       </a>
@@ -87,32 +87,21 @@
           <h1>Get Started</h1>
         </header>
 
-        <div class="row gx-0">
-
+        <div class="row gx-0 justify-content-center">
           <div class="col-lg-6 d-flex flex-column justify-content-center" data-aos="zoom-in" data-aos-delay="200">
             <div class="content">
               <h3>Upload the two files with DNAs</h3>
-              <form  method="post" enctype="multipart/form-data">
+              <form method="post" enctype="multipart/form-data" onsubmit="return control()">
                 <input type="file" name="file1ToUpload" id="file1ToUpload" class="form-control form-control-lg">
                 <br>
                 <input type="file" name="file2ToUpload" id="file2ToUpload" class="form-control form-control-lg">
                 <br>
-                <input type="submit" value="Upload files" name="submit" class="btn btn-primary btn-lg">
+                <input type="submit" value="Compute" name="submit" class="btn btn-primary btn-lg">
               </form>
             </div>
           </div>
-
-          <div class="col-lg-6 d-flex justify-content-center" data-aos="zoom-in" data-aos-delay="200">
-            <h3>File list</h3>
-          </div>
-        </div>
-
-        <div class="d-flex justify-content-center" style="margin-top: 5%;" data-aos="zoom-in" data-aos-delay="200">
-            <button type="button" class="btn btn-primary btn-lg">Compute!</button>
-        </div>
         </div>
       </div>
-
     </section><!-- End computing Section -->
 
     <!-- ======= Features Section ======= -->
@@ -517,6 +506,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@srexi/purecounterjs/dist/purecounter_vanilla.js"></script>
   <script src="https://unpkg.com/isotope-layout@3/dist/isotope.pkgd.min.js"></script>
   <script src="../static/js/validate.js"></script>
+  <script src="../static/js/controls.js"></script>
 
   <!-- Template Main JS File -->
   <script src="../static/js/main.js"></script>

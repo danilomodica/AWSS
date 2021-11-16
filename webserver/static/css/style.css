@@ -174,7 +174,7 @@ section {
 # Navigation Menu
 --------------------------------------------------------------*/
 /**
-* Desktop Navigation 
+* Desktop Navigation
 */
 .navbar {
   padding: 0;
@@ -276,7 +276,7 @@ section {
 }
 
 /**
-* Mobile Navigation 
+* Mobile Navigation
 */
 .mobile-nav-toggle {
   color: #012970;
@@ -454,6 +454,7 @@ section {
 .computing .content {
   background-color: #f6f9ff;
   padding: 40px;
+  text-align: center;
 }
 
 .computing h3 {
