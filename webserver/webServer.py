@@ -14,6 +14,6 @@ def index():
 		file1.save('files\\file1.txt')
 		file2.save('files\\file2.txt')
 
-		subprocess.check_call(["exe\\Substring.exe",'files\\file1.txt', 'files\\file2.txt', "5", "files\\result.txt"]) #da aggiustare nome risultato
+		subprocess.check_call(["exe\\Substring.exe",'files\\file1.txt', 'files\\file2.txt', "5"])
 
 	return render_template("index.html")

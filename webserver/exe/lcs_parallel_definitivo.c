@@ -6,45 +6,19 @@
 #define MAX(a, b) (a > b ? a : b)
 #define MIN(a, b) (a < b ? a : b)
 
-int BLOCK_SIZE;
+char* readFile(FILE *fin, char *txt, int block_size) {
+	fseek(fin, 0L, SEEK_END);
+	int sz = ftell(fin);
 
-//Function to read a file 
-char * readFile(FILE *fin, int *n) {
-	int BLOCK_READ_SIZE = BLOCK_SIZE;
-	char * txt, tmp;
-	int dim=8, read;
-	char buf[50];
-	(*n)=0;
-		
-	txt = malloc (dim * BLOCK_READ_SIZE * sizeof(char));
-	//Initialize the string
-	strcpy(txt,"");
-	
-	if(!txt) {
-		return NULL;
-	}
-	
-	while(fgets(buf, sizeof(buf), fin)) {
-		
-		txt = strcat(txt,buf);		
-		(*n)++;
-		if((*n)>=dim) {
-			dim *= 2;
-			txt = realloc(txt, dim * BLOCK_READ_SIZE * sizeof(char));
-			if(!txt){
-				return NULL;
-			}
-		}
-		
-	}
-	txt = realloc (txt, (*n) * BLOCK_READ_SIZE * sizeof(char));
+	txt = (char*)malloc(sz * sizeof(char));
+	fseek(fin, 0L, SEEK_SET);
+
+	(void)fscanf(fin, "%s", txt);
+
 	return txt;
 }
 
-
-
- 
-void lcs (char *a, int n, char *b, int m, char **s) {
+char* lcs (char *a, int n, char *b, int m, char *s, int block_size) {
     int i, j, k, t, l;
 	int i_start, j_start;
 
@@ -56,23 +30,21 @@ void lcs (char *a, int n, char *b, int m, char **s) {
         c[i] = &z[i * (m + 1)];
     }
     
-	for (k=1; k <= (m+n)/BLOCK_SIZE - 1; k++){   	    		
+	for (k=1; k <= (m+n)/block_size - 1; k++){   	    		
 		#pragma omp parallel for private(i,j, i_start, j_start)
-		for (l=MAX(1,k-n/BLOCK_SIZE+1); l <= MIN(m/BLOCK_SIZE,k); l++){				
+		for (l=MAX(1,k-n/block_size+1); l <= MIN(m/block_size,k); l++){				
 			
-			i_start = 1+BLOCK_SIZE*(k-l);				
-			j_start = 1+BLOCK_SIZE*(l-1);
+			i_start = 1+block_size*(k-l);				
+			j_start = 1+block_size*(l-1);
 
-			//Here we apply the serial lcs algorithm to the block
-			for (i = i_start; i < i_start+BLOCK_SIZE; i++) {
-				for (j = j_start; j < j_start+BLOCK_SIZE; j++) {
+			//Serial lcs algorithm to the block
+			for (i = i_start; i < i_start+block_size; i++) {
+				for (j = j_start; j < j_start+block_size; j++) {
 		        				        	
-		            //Since we never access matrix cells of same block in parallel,
-					//critic section isn't necessary
+					//Critic section isn't necessary since  matrix cells of same block in parallel are never accessed
 					if (a[i - 1] == b[j - 1]) {			            	
 		                c[i][j] = c[i - 1][j - 1] + 1;
-		            }
-		            else {
+		            }else {
 		                c[i][j] = MAX(c[i - 1][j], c[i][j - 1]);
 		            }
 		        }
@@ -80,94 +52,83 @@ void lcs (char *a, int n, char *b, int m, char **s) {
 		}				
 	}
     
-
-    //t contains length of lcs string
     t = c[n][m];
-    //Allocate space for the lcs string
-    *s = malloc((t+1));
+    s = (char*)malloc((t+1) * sizeof(char));;
     
 	//Rebuild of the lcs string
     for (i = n, j = m, k = t - 1; k >= 0;) {
 		if (a[i - 1] == b[j - 1]) {
-			(*s)[k] = a[i - 1];
+			s[k] = a[i - 1];
 			i--; j--; k--;
-		}
-		else if (c[i][j - 1] > c[i - 1][j]) {
+		}else if (c[i][j - 1] > c[i - 1][j]) {
 			j--;
 		}else {
 			i--;
 		}
     }
-	(*s)[t] = '\0';
-    
-    free(c);
+
+	s[t] = '\0';
+	free(c);
     free(z);
+	return s;
+}
+
+//Round the dimension of a string as multiple of the block size and add numeric characters that never appear in genetics strings into that string
+void preproc_string(int n, int *tondo, int block_size, char *str, int par) {
+	int i;
+
+	if (n % block_size == 0) {
+		tondo[0] = n;
+	}
+	else {
+		tondo[0] = block_size * (n / block_size + 1);
+	}
+
+	for (i = n; i < tondo[0]; i++) {
+		if (par == 1) {
+			str[i] = '1';
+		}
+		else {
+			str[i] = '2';
+		}
+	}
 }
 
 int main (int argc, char *argv[]) {
-	char* a, * b, *s;
-   	int N=0;
-    
-    omp_set_num_threads(24);
-    
-    //The parameters are the 2 file paths and the size of the block + nome file risultato.
-    if(argc != 5) {
-    	perror("Inserire come parametri del programma i nomi dei due file e la dimensione del blocco\n");
-    	return 0;
-	}
-	
-	BLOCK_SIZE = atoi(argv[3]);
-		
-	FILE *fin;
-		
-	if((fin = fopen(argv[1], "r"))==NULL){
-		perror("Errore nell'apertura del file!");
-		return -1;
-	}	
-	a = readFile(fin, &N);
-    fclose(fin);
-    
-    if((fin = fopen(argv[2], "r"))==NULL){
-		perror("Errore nell'apertura del file!");
-		return -1;
-	}	
-	b = readFile(fin, &N);
-    fclose(fin);
+	char *a=NULL, *b=NULL, *s=NULL;
+   	int n_tondo, m_tondo, block_size;
+	FILE* fin1, * fin2, * result;
 
-   int n = strlen(a);
-   int m = strlen(b);
-    
-    //Round the dimension of first string as multiple of the block size
-    int n_tondo;
-    if(n % BLOCK_SIZE == 0){
-    	n_tondo = n;
-	} else {
-		n_tondo = BLOCK_SIZE * (n/BLOCK_SIZE + 1);
+    if(argc != 4) { //file1.txt file2.txt matrix_block_size
+		printf("\033[31;1m Wrong parameters! \033[0m\n");    	
+		return -1;
 	}
-    	
-    //Add numeric characters that never appear in genetics strings into first string
-    int i;
-    for(i=n; i < n_tondo; i++){
-    	a[i] = '1';	
-	}
-	
-	//Round the dimension of second string as multiple of the block size
-	int m_tondo;
-    if(m % BLOCK_SIZE == 0){
-    	m_tondo = m;
-	} else {
-		m_tondo = BLOCK_SIZE * (m/BLOCK_SIZE + 1);
-	}
-    
-    //Add numeric characters that never appear in genetics strings into second string
-    for(i=m; i<m_tondo; i++){
-    	b[i] = '2';	
-	}
-    
-    lcs(a, n_tondo, b, m_tondo, &s);
 
-	FILE *result = fopen(argv[4],"w");
+	if ((fin1 = fopen(argv[1], "r")) == NULL || (fin2 = fopen(argv[2], "r")) == NULL) {
+		printf("\033[31;1m Error opening file1 or file2! \033[0m\n");
+		return -1;
+	}
+	block_size = atoi(argv[3]);
+
+	a = readFile(fin1, a, block_size);
+	b = readFile(fin2, b, block_size);   
+
+	preproc_string((int)strlen(a), &n_tondo, block_size, a, 1);
+	preproc_string((int)strlen(b), &m_tondo, block_size, b, 2);
+    
+	omp_set_num_threads(24);
+
+    s=lcs(a, n_tondo, b, m_tondo, s, block_size);
+
+	result = fopen("res_output.txt", "w");
 	fprintf(result, "%s", s);
 
+	free(a);
+	free(b);
+	free(s);
+
+	fclose(fin1);
+	fclose(fin2);
+	fclose(result);
 	return 0;
 }
