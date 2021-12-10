@@ -13,3 +13,18 @@ function control(){
 
   return submitOK;
 }
+
+function controlID(){
+  submitOK = true;
+
+  /* Gets form values */
+  var text = document.getElementById("resultID").value;
+
+  /* Checks if strings are empty*/
+  if(!text) {
+    alert("Warning! Insert the ID");
+    submitOK = false;
+  }
+
+  return submitOK;
+}

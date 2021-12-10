@@ -451,30 +451,30 @@ section {
 /*--------------------------------------------------------------
 # Computing
 --------------------------------------------------------------*/
-.computing .content {
+.computing .content, .results .content {
   background-color: #f6f9ff;
   padding: 40px;
   text-align: center;
 }
 
-.computing h3 {
+.computing h3, .results h3 {
   font-size: 24px;
   font-weight: 700;
   color: #012970;
 }
 
-.computing h1 {
+.computing h1, .results h1 {
   font-size: 44px;
   font-weight: 700;
   color: #012970;
 }
 
-.computing p {
+.computing p, .results p {
   margin: 15px 0 30px 0;
   line-height: 24px;
 }
 
-.computing .btn {
+.computing btn, .results .btn {
   width: 150px;
   background: #4154f1;
 }
