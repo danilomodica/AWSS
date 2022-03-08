@@ -1,5 +1,5 @@
 # AWSS - DNA Substring Matching
-HPC application cloud bases and multi-user that measure the similarity between two genomic sequences.
+Cloud based and multi-user HPC application that measure the similarity between two genomic sequences.
 
 ## Software used
 - [AWS](https://aws.amazon.com/)
