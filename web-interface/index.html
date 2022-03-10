@@ -11,8 +11,8 @@
   <meta content="" name="keywords">
 
   <!-- Favicons -->
-  <link href="../assets/img/favicon.png" rel="icon">
-  <link href="../assets/img/apple-touch-icon.png" rel="apple-touch-icon">
+  <link href="./assets/img/favicon.png" rel="icon">
+  <link href="./assets/img/apple-touch-icon.png" rel="apple-touch-icon">
 
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,600,600i,700,700i|Nunito:300,300i,400,400i,600,600i,700,700i|Poppins:300,300i,400,400i,500,500i,600,600i,700,700i" rel="stylesheet">
@@ -24,7 +24,7 @@
   <link href="https://cdn.jsdelivr.net/npm/remixicon@2.5.0/fonts/remixicon.css" rel="stylesheet">
 
   <!-- Template Main CSS File -->
-  <link href="../assets/css/style.css" rel="stylesheet">
+  <link href="./assets/css/style.css" rel="stylesheet">
 </head>
 
 <body>
@@ -34,7 +34,7 @@
     <div class="container-fluid container-xl d-flex align-items-center justify-content-between">
 
       <a href="/" class="logo d-flex align-items-center">
-        <img src="../assets/img/logo.png" alt="">
+        <img src="./assets/img/logo.png" alt="">
         <span>AWSS</span>
       </a>
 
@@ -43,6 +43,7 @@
           <li><a class="nav-link scrollto active" href="#hero">Home</a></li>
           <li><a class="nav-link scrollto" href="#features">Features</a></li>
           <li><a class="nav-link scrollto" href="#contact">Contact</a></li>
+          <li><a class="retrieve scrollto" href="#results">Retrieve a result</a></li>
           <li><a class="getstarted scrollto" href="#computing">Get Started</a></li>
         </ul>
         <i class="bi bi-list mobile-nav-toggle"></i>
@@ -69,7 +70,7 @@
           </div>
         </div>
         <div class="col-lg-6 hero-img" data-aos="zoom-out" data-aos-delay="200">
-          <img src="../assets/img/hero-img.png" class="img-fluid" alt="">
+          <img src="./assets/img/hero-img.png" class="img-fluid" alt="">
         </div>
       </div>
     </div>
@@ -83,7 +84,7 @@
       <div class="container" data-aos="zoom-in">
 
         <header class="section-header">
-          <h2>DNA substring matching</h2>
+          <h2>DNA substring matching - Compute</h2>
           <h1>Get Started</h1>
         </header>
 
@@ -91,7 +92,7 @@
           <div class="col-lg-6 d-flex flex-column justify-content-center" data-aos="zoom-in" data-aos-delay="200">
             <div class="content">
               <h3>Upload the two files with DNAs</h3>
-              <form method="post" enctype="multipart/form-data" onsubmit="return control()" name="form-name" value="form1" action="https://jbh9tkjt87.execute-api.eu-central-1.amazonaws.com/dev">
+              <form method="post" enctype="multipart/form-data" onsubmit="return control()" name="form-name" value="form1">
                 <input type="file" name="file1ToUpload" id="file1ToUpload" class="form-control form-control-lg">
                 <br>
                 <input type="file" name="file2ToUpload" id="file2ToUpload" class="form-control form-control-lg">
@@ -108,7 +109,7 @@
     <section id="results" class="results">
       <div class="container" data-aos="fade-right">
         <header class="section-header">
-          <h2>DNA substring matching</h2>
+          <h2>DNA substring matching - Retrieve result</h2>
           <h1>Retrieve your files</h1>
         </header>
 
@@ -140,7 +141,7 @@
         <div class="row">
 
           <div class="col-lg-6">
-            <img src="../assets/img/features.png" class="img-fluid" alt="">
+            <img src="./assets/img/features.png" class="img-fluid" alt="">
           </div>
 
           <div class="col-lg-6 mt-5 mt-lg-0 d-flex">
@@ -261,7 +262,7 @@
           </div>
 
           <div class="col-lg-6">
-            <img src="../assets/img/features-2.png" class="img-fluid" alt="">
+            <img src="./assets/img/features-2.png" class="img-fluid" alt="">
           </div>
 
         </div><!-- End Feature Tabs -->
@@ -420,7 +421,7 @@
           <p>Contact Us</p>
         </header>
 
-        <div class="row gy-4">
+        <div class="row gy-4 justify-content-center">
 
           <div class="col-lg-6">
 
@@ -454,42 +455,7 @@
                 </div>
               </div>
             </div>
-
           </div>
-
-          <div class="col-lg-6">
-            <form action="contact.php" method="post" class="php-email-form">
-              <div class="row gy-4">
-
-                <div class="col-md-6">
-                  <input type="text" name="name" class="form-control" placeholder="Your Name" required>
-                </div>
-
-                <div class="col-md-6 ">
-                  <input type="email" class="form-control" name="email" placeholder="Your Email" required>
-                </div>
-
-                <div class="col-md-12">
-                  <input type="text" class="form-control" name="subject" placeholder="Subject" required>
-                </div>
-
-                <div class="col-md-12">
-                  <textarea class="form-control" name="message" rows="6" placeholder="Message" required></textarea>
-                </div>
-
-                <div class="col-md-12 text-center">
-                  <div class="loading">Loading</div>
-                  <div class="error-message"></div>
-                  <div class="sent-message">Your message has been sent. Thank you!</div>
-
-                  <button type="submit">Send Message</button>
-                </div>
-
-              </div>
-            </form>
-
-          </div>
-
         </div>
 
       </div>
@@ -505,7 +471,7 @@
         <div class="row gy-4 justify-content-center">
           <div class="col-lg-5 col-md-12 footer-info">
             <a href="index.html" class="logo d-flex align-items-center justify-content-center">
-              <img src="../assets/img/logo.png" alt="">
+              <img src="./assets/img/logo.png" alt="">
               <span>AWSS</span>
             </a>
             <p>Cras fermentum odio eu feugiat lide par naso tierra. Justo eget nada terra videa magna derita valies darta donna mare fermentum iaculis eu non diam phasellus.</p>
@@ -528,11 +494,11 @@
   <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@srexi/purecounterjs/dist/purecounter_vanilla.js"></script>
   <script src="https://unpkg.com/isotope-layout@3/dist/isotope.pkgd.min.js"></script>
-  <script src="../assets/js/validate.js"></script>
-  <script src="../assets/js/controls.js"></script>
+  <script src="./assets/js/validate.js"></script>
+  <script src="./assets/js/controls.js"></script>
 
   <!-- Template Main JS File -->
-  <script src="../assets/js/main.js"></script>
+  <script src="./assets/js/main.js"></script>
 
 </body>
 </html>
