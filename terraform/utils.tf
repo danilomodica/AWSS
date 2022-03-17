@@ -1,3 +1,47 @@
+#Bucket that will contain initial strings to be elaborated
+resource "aws_s3_bucket" "AWSSInputFiles" {
+  bucket = "awssinputfiles"
+
+  tags = {
+    Name        = "Input files bucket"
+    Environment = "Dev"
+  }
+}
+
+resource "aws_s3_bucket_acl" "inputS3ACL" {
+  bucket = aws_s3_bucket.AWSSInputFiles.id
+  acl    = "private"
+}
+
+resource "aws_s3_bucket_public_access_block" "accessBlockInputs" {
+  bucket = aws_s3_bucket.AWSSInputFiles.id
+
+  block_public_acls   = true
+  block_public_policy = true
+}
+
+#Bucket that will contain resulting matched substrings
+resource "aws_s3_bucket" "AWSSResultFiles" {
+  bucket = "awssresultfiles"
+
+  tags = {
+    Name        = "Result files bucket"
+    Environment = "Dev"
+  }
+}
+
+resource "aws_s3_bucket_acl" "resultS3ACL" {
+  bucket = aws_s3_bucket.AWSSResultFiles.id
+  acl    = "private"
+}
+
+resource "aws_s3_bucket_public_access_block" "accessBlockResults" {
+  bucket = aws_s3_bucket.AWSSResultFiles.id
+
+  block_public_acls   = true
+  block_public_policy = true
+}
+
 #FIFO queue that contains jobs to be elaborated
 resource "aws_sqs_queue" "inputFIFOQueue" {
   name                        = "inputMsgQueue.fifo"
@@ -51,10 +95,38 @@ resource "aws_lambda_function" "sendMail" {
   runtime = "python3.9"
   architectures = ["arm64"]
 
-    tags = {
+  tags = {
     Name        = "Send Mail function"
     Environment = "Dev"
   }
+}
+
+#SendMail log group and subscription to Opensearch
+resource "aws_cloudwatch_log_group" "sendMailLogGroup" {
+  name              = "/aws/lambda/${aws_lambda_function.sendMail.function_name}"
+  retention_in_days = 90
+
+    tags = {
+    Application = "SendMail lambda"
+    Environment = "Dev"
+  }
+}
+
+resource "aws_lambda_permission" "cloudwatch_sendMail_allow" {
+  statement_id = "cloudwatch_sendMail_allow"
+  action = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.cwl_stream_lambda.function_name
+  principal = "logs.eu-central-1.amazonaws.com"
+  source_arn = "${aws_cloudwatch_log_group.sendMailLogGroup.arn}:*"
+}
+
+resource "aws_cloudwatch_log_subscription_filter" "sendMail_logfilter" {
+  name            = "sendMail_logsubscription"
+  log_group_name  = aws_cloudwatch_log_group.sendMailLogGroup.name
+  filter_pattern  = ""
+  destination_arn = aws_lambda_function.cwl_stream_lambda.arn
+
+  depends_on = [ aws_lambda_permission.cloudwatch_sendMail_allow ]
 }
 
 #Trigger SQS to Lambda
@@ -65,43 +137,7 @@ resource "aws_lambda_event_source_mapping" "eventSourceMapping" {
   batch_size       = 10
 }
 
-#Bucket that will contain initial strings to be elaborated
-resource "aws_s3_bucket" "AWSSInputFiles" {
-  bucket = "awssinputfiles"
-  acl    = "private"
-
-  tags = {
-    Name        = "Input files bucket"
-    Environment = "Dev"
-  }
-}
-
-resource "aws_s3_bucket_public_access_block" "accessBlockInputs" {
-  bucket = aws_s3_bucket.AWSSInputFiles.id
-
-  block_public_acls   = true
-  block_public_policy = true
-}
-
-#Bucket that will contain resulting matched substrings
-resource "aws_s3_bucket" "AWSSResultFiles" {
-  bucket = "awssresultfiles"
-  acl    = "private"
-
-  tags = {
-    Name        = "Result files bucket"
-    Environment = "Dev"
-  }
-}
-
-resource "aws_s3_bucket_public_access_block" "accessBlockResults" {
-  bucket = aws_s3_bucket.AWSSResultFiles.id
-
-  block_public_acls   = true
-  block_public_policy = true
-}
-
-#Useful policies and roles  to have a working trigger (SQS) for Lambda
+#Useful policies and roles to have a working trigger (SQS) for Lambda
 resource "aws_iam_policy" "SQSPollerPolicy" {
   name = "SQSPollerExecutionRole"
 

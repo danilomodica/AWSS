@@ -2,7 +2,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 3.0"
+      version = "~> 4.5"
     }
   }
 }
@@ -17,6 +17,13 @@ variable "region" {
 # Configure the AWS Provider
 provider "aws" {
   region = var.region
+  access_key = var.ak
+  secret_key = var.ssk
+}
+
+provider "aws" { #Some services are only available in us-easy-1 (cloudfront/route53)
+  alias  = "us-east-1"
+  region = "us-east-1"
   access_key = var.ak
   secret_key = var.ssk
 }

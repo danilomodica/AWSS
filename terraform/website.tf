@@ -7,19 +7,6 @@ locals {mime_types = jsondecode(file("./templates/mime.json"))}
 # Bucket configured to host a website
 resource "aws_s3_bucket" "www_bucket" {
   bucket = "www.${var.bucket_name}"
-  policy = templatefile("templates/s3Policy.json", { bucket = "www.${var.bucket_name}" })
-
-  cors_rule {
-    allowed_headers = ["Authorization", "Content-Length"]
-    allowed_methods = ["GET", "POST"]
-    allowed_origins = ["https://www.${var.bucket_name}"]
-    max_age_seconds = 3000
-  }
-
-  website {
-    index_document = "index.html"
-    #error_document = "404.html"
-  }
 
   tags = {
     Name        = "S3 Website"
@@ -27,8 +14,35 @@ resource "aws_s3_bucket" "www_bucket" {
   }
 }
 
-#Upload website files from web-interface folder
-resource "aws_s3_bucket_object" "website_files" {
+resource "aws_s3_bucket_policy" "www_bucketPolicy" {
+  bucket = aws_s3_bucket.www_bucket.id
+  policy = templatefile("templates/s3Policy.json", { bucket = "www.${var.bucket_name}" })
+}
+
+resource "aws_s3_bucket_website_configuration" "www_bucketWebConfig" {
+  bucket = aws_s3_bucket.www_bucket.id
+
+  index_document {
+    suffix = "index.html"
+  }
+
+  /*error_document {
+    key = "error.html"
+  }*/
+}
+
+resource "aws_s3_bucket_cors_configuration" "www_bucketCORS" {
+  bucket = aws_s3_bucket.www_bucket.id
+
+  cors_rule {
+    allowed_headers = ["Authorization", "Content-Length"]
+    allowed_methods = ["GET", "POST"]
+    allowed_origins = ["https://www.${var.bucket_name}"]
+    max_age_seconds = 3000
+  }
+}
+
+resource "aws_s3_object" "website_files" { #Upload website files from web-interface folder
   for_each      = fileset(var.upload_directory, "**/*.*")
   bucket        = aws_s3_bucket.www_bucket.id
   key           = replace(each.value, var.upload_directory, "")
@@ -37,10 +51,19 @@ resource "aws_s3_bucket_object" "website_files" {
   content_type = lookup(local.mime_types, regex("\\.[^.]+$", each.value), null)
 }
 
-# Cloudfront distribution for main s3 site (only http).
+resource "aws_s3_bucket" "CFLogs" {
+  bucket = "awss-cloudfront-logs"
+
+  tags = {
+    Name        = "CloudFront Logs"
+    Environment = "Dev"
+  }
+}
+
+# Cloudfront distribution
 resource "aws_cloudfront_distribution" "www_s3_distribution" {
   origin {
-    domain_name = aws_s3_bucket.www_bucket.website_endpoint
+    domain_name = aws_s3_bucket.www_bucket.bucket_domain_name
     origin_id = "S3-www.${var.bucket_name}"
 
     custom_origin_config {
@@ -61,6 +84,12 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
     response_code = 200
     response_page_path = "/404.html"
   }*/
+
+   logging_config {
+    include_cookies = false
+    prefix = "logs"
+    bucket = aws_s3_bucket.CFLogs.bucket_domain_name
+  }
 
   aliases = [var.website_url]
 
@@ -144,8 +173,7 @@ resource "aws_route53_record" "www" {
   records = [var.website_url]
 }
 
-#For certificate
-resource "aws_route53_record" "certificateCNAME" {
+resource "aws_route53_record" "certificateCNAME" { #For certificate
   zone_id = aws_route53_zone.route53_zone.zone_id
   name    = "_60bc1a0532bf2a25eeeb788b15dce1f.${var.website_url}"
   type    = "CNAME"
@@ -156,4 +184,106 @@ resource "aws_route53_record" "certificateCNAME" {
 output "Route53_Nameservers" {
   value = aws_route53_zone.route53_zone.name_servers
   description = "Nameserver Route53 to be configured in the domain registrar"
+}
+
+resource "aws_route53_health_check" "r53HealthCheck" {
+  fqdn              = var.website_url
+  port              = 80
+  type              = "HTTP"
+  resource_path     = "/"
+  failure_threshold = "5"
+  request_interval  = "30"
+
+  tags = {
+    Name = "HTTP Health Check"
+    Environment = "Dev"
+  }
+}
+
+#Cloudwatch alarm in case the website is not available
+resource "aws_cloudwatch_metric_alarm" "r53_alarm" {
+  provider                  = aws.us-east-1
+  alarm_name                = "R53-health-check"
+  comparison_operator       = "LessThanThreshold"
+  evaluation_periods        = "1"
+  metric_name               = "HealthCheckStatus"
+  namespace                 = "AWS/Route53"
+  period                    = "60"
+  statistic                 = "Minimum"
+  threshold                 = "1"
+  insufficient_data_actions = []
+  alarm_description         = "Send an alarm if website is down"
+  alarm_actions             = [aws_sns_topic.topic.arn]
+
+  dimensions = {
+    HealthCheckId = aws_route53_health_check.r53HealthCheck.id
+  }
+}
+
+#Used to send advice to a predefined email address (to be set)
+resource "aws_sns_topic" "topic" {
+  name     = "R53-healthcheck"
+  provider = aws.us-east-1
+}
+
+#Route53 query log group and subscription to Opensearch
+resource "aws_cloudwatch_log_group" "aws_route53_cwl" {
+  provider = aws.us-east-1
+
+  name              = "/aws/route53/${aws_route53_zone.route53_zone.name}"
+  retention_in_days = 90
+
+  tags = {
+    Application = "Route53"
+    Environment = "Dev"
+  }
+}
+
+resource "aws_route53_query_log" "r53_querylog" {
+  depends_on = [aws_cloudwatch_log_resource_policy.route53-query-logging-policy]
+
+  cloudwatch_log_group_arn = aws_cloudwatch_log_group.aws_route53_cwl.arn
+  zone_id                  = aws_route53_zone.route53_zone.zone_id
+}
+
+resource "aws_lambda_permission" "cloudwatch_r53_allow" {
+  statement_id = "cloudwatch_allow_r53"
+  action = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.cwl_stream_lambda.function_name
+  principal = "logs.us-east-1.amazonaws.com"
+  source_arn = "${aws_cloudwatch_log_group.aws_route53_cwl.arn}:*"
+}
+
+resource "aws_cloudwatch_log_subscription_filter" "r53_logfilter" {
+  provider        = aws.us-east-1
+  name            = "r53_logsubscription"
+  log_group_name  = aws_cloudwatch_log_group.aws_route53_cwl.name
+  filter_pattern  = ""
+  destination_arn = aws_lambda_function.cwl_stream_lambda.arn
+
+  depends_on = [ aws_lambda_permission.cloudwatch_r53_allow ]
+}
+
+#Policies
+data "aws_iam_policy_document" "route53-query-logging-policy" {
+  statement {
+    actions = [
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+    ]
+
+    resources = ["arn:aws:logs:*:*:log-group:/aws/route53/*"]
+
+    principals {
+      identifiers = ["route53.amazonaws.com"]
+      type        = "Service"
+    }
+  }
+}
+
+resource "aws_cloudwatch_log_resource_policy" "route53-query-logging-policy" {
+  provider = aws.us-east-1
+
+  policy_document = data.aws_iam_policy_document.route53-query-logging-policy.json
+  policy_name     = "route53-query-logging-policy"
 }
