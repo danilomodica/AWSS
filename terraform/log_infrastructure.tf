@@ -74,11 +74,11 @@ output "elasticsearch_KibanaURL" {
 #Lambda that streams log data to opensearch (it is the standard one but uses env variable to point the correct kibana endpoint)
 resource "aws_lambda_function" "cwl_stream_lambda" {
   description = "Function used to stream log groups to Opensearch cluster"
-  filename         = "cwl2lambda.zip"
+  filename         = "zip/cwl2lambda.zip"
   function_name    = "LogsToElasticsearch"
   role             = aws_iam_role.lambda_elasticsearch_execution_role.arn
   handler          = "index.handler"
-  source_code_hash = filebase64sha256(("cwl2lambda.zip"))
+  source_code_hash = filebase64sha256(("zip/cwl2lambda.zip"))
   runtime          = "nodejs14.x"
 
   environment {
