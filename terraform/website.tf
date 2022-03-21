@@ -16,7 +16,7 @@ resource "aws_s3_bucket" "www_bucket" {
 
 resource "aws_s3_bucket_policy" "www_bucketPolicy" {
   bucket = aws_s3_bucket.www_bucket.id
-  policy = templatefile("templates/s3Policy.json", { bucket = "www.${var.bucket_name}" })
+  policy = templatefile("templates/s3Policy.json", { bucket = "www.${var.bucket_name}", action = "GetObject" })
 }
 
 resource "aws_s3_bucket_website_configuration" "www_bucketWebConfig" {

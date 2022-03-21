@@ -1,47 +1,3 @@
-#Bucket that will contain initial strings to be elaborated
-resource "aws_s3_bucket" "AWSSInputFiles" {
-  bucket = "awssinputfiles"
-
-  tags = {
-    Name        = "Input files bucket"
-    Environment = "Dev"
-  }
-}
-
-resource "aws_s3_bucket_acl" "inputS3ACL" {
-  bucket = aws_s3_bucket.AWSSInputFiles.id
-  acl    = "private"
-}
-
-resource "aws_s3_bucket_public_access_block" "accessBlockInputs" {
-  bucket = aws_s3_bucket.AWSSInputFiles.id
-
-  block_public_acls   = true
-  block_public_policy = true
-}
-
-#Bucket that will contain resulting matched substrings
-resource "aws_s3_bucket" "AWSSResultFiles" {
-  bucket = "awssresultfiles"
-
-  tags = {
-    Name        = "Result files bucket"
-    Environment = "Dev"
-  }
-}
-
-resource "aws_s3_bucket_acl" "resultS3ACL" {
-  bucket = aws_s3_bucket.AWSSResultFiles.id
-  acl    = "private"
-}
-
-resource "aws_s3_bucket_public_access_block" "accessBlockResults" {
-  bucket = aws_s3_bucket.AWSSResultFiles.id
-
-  block_public_acls   = true
-  block_public_policy = true
-}
-
 #FIFO queue that contains jobs to be elaborated
 resource "aws_sqs_queue" "inputFIFOQueue" {
   name                        = "inputMsgQueue.fifo"
@@ -85,12 +41,12 @@ resource "aws_sqs_queue" "sendMailQueue" {
 #Lambda function written in Python that send a mail wether a job was completed successfully or not
 resource "aws_lambda_function" "sendMail" {
   description = "Function that notify the user about his job execution"
-  filename      = "sendMail.zip"
+  filename      = "zip/sendMail.zip"
   function_name = "sendMail"
   role          = aws_iam_role.lambdaIAM.arn
   handler       = "lambda_function.lambda_handler"
 
-  source_code_hash = filebase64sha256("sendMail.zip")
+  source_code_hash = filebase64sha256("zip/sendMail.zip")
 
   runtime = "python3.9"
   architectures = ["arm64"]
