@@ -42,7 +42,13 @@ resource "aws_s3_bucket_cors_configuration" "www_bucketCORS" {
   }
 }
 
-resource "aws_s3_object" "website_files" { #Upload website files from web-interface folder
+# Upload website files from web-interface folder
+resource "aws_s3_object" "website_files" {
+  depends_on = [
+    aws_api_gateway_deployment.apigw-deployment,
+    local_file.output-json
+  ]
+
   for_each      = fileset(var.upload_directory, "**/*.*")
   bucket        = aws_s3_bucket.www_bucket.id
   key           = replace(each.value, var.upload_directory, "")

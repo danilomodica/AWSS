@@ -372,6 +372,9 @@ resource "aws_cloudwatch_log_group" "apigw-log-group" {
 
 /* Output API url in a JSON file */
 resource "local_file" "output-json" {
-    content  = "{\"url\": \"${aws_api_gateway_deployment.apigw-deployment.invoke_url}\"}"
-    filename = "../web-interface/assets/url.json"
+  depends_on = [
+    aws_api_gateway_deployment.apigw-deployment
+  ]
+  content  = "{\"url\": \"${aws_api_gateway_deployment.apigw-deployment.invoke_url}\"}"
+  filename = "../web-interface/assets/url.json"
 }
