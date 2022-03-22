@@ -53,14 +53,14 @@ resource "aws_iam_policy" "s3-put-policy" {
   name        = "apigateway-to-S3"
   description = "Policy to store objects from S3"
 
-  policy = templatefile("./templates/s3Policy.json", { bucket = "${aws_s3_bucket.AWSSInputFiles.id}", action = "PutObject" })
+  policy = templatefile("./templates/bucketPolicy.json", { bucket = "${aws_s3_bucket.AWSSInputFiles.id}", action = "PutObject" })
 }
 
 resource "aws_iam_policy" "s3-get-policy" {
   name        = "apigateway-from-S3"
   description = "Policy to get objects from S3"
 
-  policy = templatefile("./templates/s3Policy.json", { bucket = "${aws_s3_bucket.AWSSResultFiles.id}", action = "GetObject" })
+  policy = templatefile("./templates/bucketPolicy.json", { bucket = "${aws_s3_bucket.AWSSResultFiles.id}", action = "GetObject" })
 }
 
 /* IAM Role */
@@ -87,7 +87,7 @@ resource "aws_iam_role_policy_attachment" "role-policy-attach3" {
 /* API Gateway Configuration */
 resource "aws_api_gateway_rest_api" "apigw" {
   name               = "apiGatewayS3"
-  description        = "API Gateway to interact with S3 buckets"
+  description        = "API Gateway to interact with S3 buckets and SQS queues"
   binary_media_types = ["application/octet"]
 
   endpoint_configuration {
@@ -99,7 +99,7 @@ resource "aws_api_gateway_account" "apigw-settings" {
   cloudwatch_role_arn = aws_iam_role.apigateway-role.arn
 }
 
-/* API Gateway Resources for the Website */
+/* API Gateway Resources for S3 */
 resource "aws_api_gateway_resource" "bucket-resource" {
   rest_api_id = aws_api_gateway_rest_api.apigw.id
   parent_id   = aws_api_gateway_rest_api.apigw.root_resource_id
@@ -301,7 +301,124 @@ resource "aws_api_gateway_integration_response" "options-response" {
 }
 
 /* API Gateway Resources for SQS */
-/* TODO */
+resource "aws_api_gateway_resource" "sqs-resource" {
+  rest_api_id = aws_api_gateway_rest_api.apigw.id
+  parent_id   = aws_api_gateway_rest_api.apigw.root_resource_id
+  path_part   = "sqs"
+}
+
+/* API Gateway SQS POST Method */
+resource "aws_api_gateway_method" "post" {
+  rest_api_id   = aws_api_gateway_rest_api.apigw.id
+  resource_id   = aws_api_gateway_resource.sqs-resource.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_method_response" "post-response" {
+  rest_api_id = aws_api_gateway_rest_api.apigw.id
+  resource_id = aws_api_gateway_resource.sqs-resource.id
+  http_method = aws_api_gateway_method.post.http_method
+  status_code = 200
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = true
+  }
+
+  response_models = {
+    "application/json" = "Empty"
+  }
+}
+
+resource "aws_api_gateway_integration" "post" {
+  rest_api_id = aws_api_gateway_rest_api.apigw.id
+  resource_id = aws_api_gateway_resource.sqs-resource.id
+  http_method = aws_api_gateway_method.post.http_method
+  integration_http_method = "POST"
+  type = "AWS"
+
+  uri         = "arn:aws:apigateway:${var.region}:sqs:path/${data.aws_caller_identity.current.account_id}/${aws_sqs_queue.inputFIFOQueue.name}"
+  credentials = aws_iam_role.apigateway-sqs-role.arn
+
+  request_parameters = { "integration.request.header.Content-Type" = "'application/x-www-form-urlencoded'" }
+
+  request_templates = {
+    "application/json" = "Action=SendMessage&MessageBody=$input.body&MessageGroupId=1"
+  }
+}
+
+resource "aws_api_gateway_integration_response" "post-response" {
+  rest_api_id = aws_api_gateway_rest_api.apigw.id
+  resource_id = aws_api_gateway_resource.sqs-resource.id
+  http_method = aws_api_gateway_method.post.http_method
+  status_code = 200
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = "'*'"
+  }
+
+  depends_on = [
+    aws_api_gateway_integration.post,
+    aws_api_gateway_method_response.post-response
+  ]
+}
+
+/* API SQS Gateway OPTIONS Method */
+resource "aws_api_gateway_method" "options2" {
+  rest_api_id   = aws_api_gateway_rest_api.apigw.id
+  resource_id   = aws_api_gateway_resource.sqs-resource.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_method_response" "options2-response" {
+  rest_api_id = aws_api_gateway_rest_api.apigw.id
+  resource_id = aws_api_gateway_resource.sqs-resource.id
+  http_method = aws_api_gateway_method.options2.http_method
+  status_code = 200
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+
+  response_models = {
+    "application/json" = "Empty"
+  }
+}
+
+resource "aws_api_gateway_integration" "options2" {
+  rest_api_id = aws_api_gateway_rest_api.apigw.id
+  resource_id = aws_api_gateway_resource.sqs-resource.id
+  http_method = aws_api_gateway_method.options2.http_method
+  type = "MOCK"
+  content_handling = "CONVERT_TO_TEXT"
+
+  request_templates = {
+    "application/json" = jsonencode({
+      statusCode = 200
+    })
+  }
+}
+
+resource "aws_api_gateway_integration_response" "options2-response" {
+  rest_api_id   = aws_api_gateway_rest_api.apigw.id
+  resource_id   = aws_api_gateway_resource.sqs-resource.id
+  http_method   = aws_api_gateway_method.options2.http_method
+  status_code   = 200
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'OPTIONS,POST'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  depends_on = [
+    aws_api_gateway_integration.options2,
+    aws_api_gateway_method_response.options2-response
+  ]
+}
 
 /* API Gateway Responses */
 resource "aws_api_gateway_gateway_response" "cors1" {
@@ -310,7 +427,7 @@ resource "aws_api_gateway_gateway_response" "cors1" {
 
   response_parameters = {
     "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "gatewayresponse.header.Access-Control-Allow-Methods" = "'OPTIONS,GET,PUT'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'OPTIONS,GET,PUT,POST'"
     "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
   }
 }
@@ -320,7 +437,7 @@ resource "aws_api_gateway_gateway_response" "cors2" {
 
   response_parameters = {
     "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "gatewayresponse.header.Access-Control-Allow-Methods" = "'OPTIONS,GET,PUT'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'OPTIONS,GET,PUT,POST'"
     "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
   }
 }
@@ -339,7 +456,15 @@ resource "aws_api_gateway_deployment" "apigw-deployment" {
     aws_api_gateway_integration_response.options-response,
     aws_api_gateway_integration.options,
     aws_api_gateway_method.options,
-    aws_api_gateway_method_response.options-response
+    aws_api_gateway_method_response.options-response,
+    aws_api_gateway_method.post,
+    aws_api_gateway_method_response.post-response,
+    aws_api_gateway_integration_response.post-response,
+    aws_api_gateway_integration.post, 
+    aws_api_gateway_integration_response.options2-response,
+    aws_api_gateway_integration.options2,
+    aws_api_gateway_method.options2,
+    aws_api_gateway_method_response.options2-response
   ]
   rest_api_id = aws_api_gateway_rest_api.apigw.id
   stage_name  = "dev"

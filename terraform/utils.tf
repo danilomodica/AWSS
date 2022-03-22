@@ -1,5 +1,33 @@
-#FIFO queue that contains jobs to be elaborated
+/* SQS Policy */
+resource "aws_iam_policy" "sqs-policy" {
+  name        = "apigw-sqsQueue"
+  description = "Policy to put messages into SQS"
+
+  policy = templatefile("./templates/sqs.json", { sqs = "${aws_sqs_queue.inputFIFOQueue.arn}"})
+}
+
+/* SQS IAM Role */
+resource "aws_iam_role" "apigateway-sqs-role" {
+  name = "apigw-send-msg-sqs"
+
+  assume_role_policy = templatefile("./templates/apiGateway.json", {})
+}
+
+/* SQS Role - Policy attachments */
+resource "aws_iam_role_policy_attachment" "role-policy-attachment1" {
+  role       = aws_iam_role.apigateway-sqs-role.name
+  policy_arn = aws_iam_policy.sqs-policy.arn
+}
+resource "aws_iam_role_policy_attachment" "role-policy-attachment2" {
+  role       = aws_iam_role.apigateway-sqs-role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+}
+
+# FIFO queue that contains jobs to be elaborated
 resource "aws_sqs_queue" "inputFIFOQueue" {
+  depends_on = [
+    data.aws_caller_identity.current
+  ]
   name                        = "inputMsgQueue.fifo"
   fifo_queue                  = true
   content_based_deduplication = true
@@ -11,7 +39,12 @@ resource "aws_sqs_queue" "inputFIFOQueue" {
   delay_seconds             = 0
   visibility_timeout_seconds = 10
 
- policy = templatefile("./templates/SQSFifoPolicy.json", { region = "eu-central-1", iam = "389487414326", queue_name = "inputMsgQueue.fifo", role_name = "apigw-send-msg-sqs" })
+  policy = templatefile("./templates/SQSFifoPolicy.json", { 
+    region = "${var.region}", 
+    iam = "${data.aws_caller_identity.current.account_id}", 
+    queue_name = "inputMsgQueue.fifo", 
+    role_name = "${aws_iam_role.apigateway-sqs-role.name}" 
+  })
 
   tags = {
     Name = "Input info queue"
@@ -30,7 +63,11 @@ resource "aws_sqs_queue" "sendMailQueue" {
   delay_seconds             = 0
   visibility_timeout_seconds = 30
 
-  policy = templatefile("./templates/SQSStandardPolicy.json", { region = "eu-central-1", iam = "389487414326", queue_name = "sendMailQueue" })
+  policy = templatefile("./templates/SQSStandardPolicy.json", { 
+    region = "${var.region}", 
+    iam = "${data.aws_caller_identity.current.account_id}",  
+    queue_name = "sendMailQueue" 
+  })
 
   tags = {
     Name = "Send Mail function queue"
