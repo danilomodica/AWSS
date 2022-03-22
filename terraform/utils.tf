@@ -25,9 +25,6 @@ resource "aws_iam_role_policy_attachment" "role-policy-attachment2" {
 
 # FIFO queue that contains jobs to be elaborated
 resource "aws_sqs_queue" "inputFIFOQueue" {
-  depends_on = [
-    data.aws_caller_identity.current
-  ]
   name                        = "inputMsgQueue.fifo"
   fifo_queue                  = true
   content_based_deduplication = true
@@ -39,20 +36,36 @@ resource "aws_sqs_queue" "inputFIFOQueue" {
   delay_seconds             = 0
   visibility_timeout_seconds = 10
 
-  policy = templatefile("./templates/SQSFifoPolicy.json", { 
-    region = "${var.region}", 
-    iam = "${data.aws_caller_identity.current.account_id}", 
-    queue_name = "inputMsgQueue.fifo", 
-    role_name = "${aws_iam_role.apigateway-sqs-role.name}" 
-  })
-
   tags = {
     Name = "Input info queue"
     Environment = "Dev"
   }
 }
 
-#Queue with information to send mails about the result of a job execution
+# https://github.com/hashicorp/terraform-provider-aws/issues/13980
+resource "time_sleep" "wait_60_seconds_1" {
+  depends_on = [aws_sqs_queue.inputFIFOQueue]
+  create_duration  = "60s"
+}
+
+resource "aws_sqs_queue_policy" "inputFIFOQueuePolicy" {
+  queue_url = aws_sqs_queue.inputFIFOQueue.id
+
+  policy = templatefile("./templates/SQSFifoPolicy.json", { 
+    region = "${var.region}", 
+    iam = "${data.aws_caller_identity.current.account_id}",
+    queue_name = "inputMsgQueue.fifo", 
+    role_name = "${aws_iam_role.apigateway-sqs-role.name}"
+  })
+
+  depends_on = [
+    time_sleep.wait_60_seconds_1,
+    data.aws_caller_identity.current,
+    aws_iam_role.apigateway-sqs-role
+  ]
+}
+
+# Queue with information to send mails about the result of a job execution
 resource "aws_sqs_queue" "sendMailQueue" {
   name                        = "sendMailQueue"
   sqs_managed_sse_enabled     = true
@@ -63,16 +76,31 @@ resource "aws_sqs_queue" "sendMailQueue" {
   delay_seconds             = 0
   visibility_timeout_seconds = 30
 
-  policy = templatefile("./templates/SQSStandardPolicy.json", { 
-    region = "${var.region}", 
-    iam = "${data.aws_caller_identity.current.account_id}",  
-    queue_name = "sendMailQueue" 
-  })
-
   tags = {
     Name = "Send Mail function queue"
     Environment = "Dev"
   }
+}
+
+# https://github.com/hashicorp/terraform-provider-aws/issues/13980
+resource "time_sleep" "wait_60_seconds_2" {
+  depends_on = [aws_sqs_queue.sendMailQueue]
+  create_duration  = "60s"
+}
+
+resource "aws_sqs_queue_policy" "sendMailQueuePolicy" {
+  queue_url = aws_sqs_queue.sendMailQueue.id
+
+  policy = templatefile("./templates/SQSStandardPolicy.json", { 
+    region = "${var.region}", 
+    iam = "${data.aws_caller_identity.current.account_id}",
+    queue_name = "sendMailQueue" 
+  })
+
+  depends_on = [
+    time_sleep.wait_60_seconds_2,
+    data.aws_caller_identity.current
+  ]
 }
 
 #Lambda function written in Python that send a mail wether a job was completed successfully or not
@@ -105,22 +133,22 @@ resource "aws_cloudwatch_log_group" "sendMailLogGroup" {
   }
 }
 
-resource "aws_lambda_permission" "cloudwatch_sendMail_allow" {
-  statement_id = "cloudwatch_sendMail_allow"
-  action = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.cwl_stream_lambda.function_name
-  principal = "logs.eu-central-1.amazonaws.com"
-  source_arn = "${aws_cloudwatch_log_group.sendMailLogGroup.arn}:*"
-}
+# resource "aws_lambda_permission" "cloudwatch_sendMail_allow" {
+#   statement_id = "cloudwatch_sendMail_allow"
+#   action = "lambda:InvokeFunction"
+#   function_name = aws_lambda_function.cwl_stream_lambda.function_name
+#   principal = "logs.eu-central-1.amazonaws.com"
+#   source_arn = "${aws_cloudwatch_log_group.sendMailLogGroup.arn}:*"
+# }
 
-resource "aws_cloudwatch_log_subscription_filter" "sendMail_logfilter" {
-  name            = "sendMail_logsubscription"
-  log_group_name  = aws_cloudwatch_log_group.sendMailLogGroup.name
-  filter_pattern  = ""
-  destination_arn = aws_lambda_function.cwl_stream_lambda.arn
+# resource "aws_cloudwatch_log_subscription_filter" "sendMail_logfilter" {
+#   name            = "sendMail_logsubscription"
+#   log_group_name  = aws_cloudwatch_log_group.sendMailLogGroup.name
+#   filter_pattern  = ""
+#   destination_arn = aws_lambda_function.cwl_stream_lambda.arn
 
-  depends_on = [ aws_lambda_permission.cloudwatch_sendMail_allow ]
-}
+#   depends_on = [ aws_lambda_permission.cloudwatch_sendMail_allow ]
+# }
 
 #Trigger SQS to Lambda
 resource "aws_lambda_event_source_mapping" "eventSourceMapping" {
