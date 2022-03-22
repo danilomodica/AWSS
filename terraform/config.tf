@@ -28,6 +28,8 @@ provider "aws" { #Some services are only available in us-easy-1 (cloudfront/rout
   secret_key = var.ssk
 }
 
+data "aws_caller_identity" "current" {} # to take iam ID
+
 output "Region" {
   value = var.region
   description = "Distribution region"

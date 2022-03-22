@@ -1,7 +1,6 @@
 #Credentials to access to OpenSearch dashboard
 variable "masterName" {default = "awssCloud"}
 variable "masterPass" {default = "awssCC22*"}
-data "aws_caller_identity" "current" {}
 
 output "elasticsearch_credentials" {
   value = [var.masterName, var.masterPass]
