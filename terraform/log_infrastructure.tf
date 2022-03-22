@@ -71,6 +71,13 @@ output "elasticsearch_KibanaURL" {
 }
 
 #Lambda that streams log data to opensearch (it is the standard one but uses env variable to point the correct kibana endpoint)
+data "archive_file" "lambda_my_function" {
+  type             = "zip"
+  source_file      = "./lambdaSource/cwl2lambda/index.js"
+  output_file_mode = "0666"
+  output_path      = "./zip/cwl2lambda.zip"
+}
+
 resource "aws_lambda_function" "cwl_stream_lambda" {
   description = "Function used to stream log groups to Opensearch cluster"
   filename         = "zip/cwl2lambda.zip"

@@ -70,6 +70,7 @@ resource "aws_s3_object" "website_json_file" {
 
 resource "aws_s3_bucket" "CFLogs" {
   bucket = "awss-cloudfront-logs"
+  force_destroy = true
 
   tags = {
     Name        = "CloudFront Logs"

@@ -492,7 +492,24 @@ resource "aws_api_gateway_method_settings" "stage-settings" {
 
 resource "aws_cloudwatch_log_group" "apigw-log-group" {
   name              = "API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.apigw.id}/${aws_api_gateway_deployment.apigw-deployment.stage_name}"
-  retention_in_days = 0 # never expire
+  retention_in_days = 90
+}
+
+resource "aws_lambda_permission" "cloudwatch_apigw_allow" {
+  statement_id = "cloudwatch_apigw_allow"
+  action = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.cwl_stream_lambda.function_name
+  principal = "logs.eu-central-1.amazonaws.com"
+  source_arn = "${aws_cloudwatch_log_group.apigw-log-group.arn}:*"
+}
+
+resource "aws_cloudwatch_log_subscription_filter" "cloudtrail_logfilter" {
+  name            = "cloudtrail_logsubscription"
+  log_group_name  = aws_cloudwatch_log_group.apigw-log-group.name
+  filter_pattern  = ""
+  destination_arn = aws_lambda_function.cwl_stream_lambda.arn
+
+  depends_on = [ aws_lambda_permission.cloudwatch_apigw_allow ]
 }
 
 /* Output API url in a JSON file */

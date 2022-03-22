@@ -104,6 +104,13 @@ resource "aws_sqs_queue_policy" "sendMailQueuePolicy" {
 }
 
 #Lambda function written in Python that send a mail wether a job was completed successfully or not
+data "archive_file" "lambda_my_function" {
+  type             = "zip"
+  source_file      = "./lambdaSource/sendMail/lambda_function.py"
+  output_file_mode = "0666"
+  output_path      = "./zip/sendMail.zip"
+}
+
 resource "aws_lambda_function" "sendMail" {
   description = "Function that notify the user about his job execution"
   filename      = "zip/sendMail.zip"
@@ -127,7 +134,7 @@ resource "aws_cloudwatch_log_group" "sendMailLogGroup" {
   name              = "/aws/lambda/${aws_lambda_function.sendMail.function_name}"
   retention_in_days = 90
 
-    tags = {
+  tags = {
     Application = "SendMail lambda"
     Environment = "Dev"
   }
