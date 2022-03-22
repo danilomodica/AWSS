@@ -133,22 +133,22 @@ resource "aws_cloudwatch_log_group" "sendMailLogGroup" {
   }
 }
 
-# resource "aws_lambda_permission" "cloudwatch_sendMail_allow" {
-#   statement_id = "cloudwatch_sendMail_allow"
-#   action = "lambda:InvokeFunction"
-#   function_name = aws_lambda_function.cwl_stream_lambda.function_name
-#   principal = "logs.eu-central-1.amazonaws.com"
-#   source_arn = "${aws_cloudwatch_log_group.sendMailLogGroup.arn}:*"
-# }
+resource "aws_lambda_permission" "cloudwatch_sendMail_allow" {
+  statement_id = "cloudwatch_sendMail_allow"
+  action = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.cwl_stream_lambda.function_name
+  principal = "logs.eu-central-1.amazonaws.com"
+  source_arn = "${aws_cloudwatch_log_group.sendMailLogGroup.arn}:*"
+}
 
-# resource "aws_cloudwatch_log_subscription_filter" "sendMail_logfilter" {
-#   name            = "sendMail_logsubscription"
-#   log_group_name  = aws_cloudwatch_log_group.sendMailLogGroup.name
-#   filter_pattern  = ""
-#   destination_arn = aws_lambda_function.cwl_stream_lambda.arn
+resource "aws_cloudwatch_log_subscription_filter" "sendMail_logfilter" {
+  name            = "sendMail_logsubscription"
+  log_group_name  = aws_cloudwatch_log_group.sendMailLogGroup.name
+  filter_pattern  = ""
+  destination_arn = aws_lambda_function.cwl_stream_lambda.arn
 
-#   depends_on = [ aws_lambda_permission.cloudwatch_sendMail_allow ]
-# }
+  depends_on = [ aws_lambda_permission.cloudwatch_sendMail_allow ]
+}
 
 #Trigger SQS to Lambda
 resource "aws_lambda_event_source_mapping" "eventSourceMapping" {
