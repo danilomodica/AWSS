@@ -71,9 +71,9 @@ output "elasticsearch_KibanaURL" {
 }
 
 #Lambda that streams log data to opensearch (it is the standard one but uses env variable to point the correct kibana endpoint)
-data "archive_file" "lambda_my_function" {
+data "archive_file" "cwl2lambdaZip" {
   type             = "zip"
-  source_file      = "./lambdaSource/cwl2lambda/index.js"
+  source_file      = "${path.module}/lambdaSource/cwl2lambda/index.js"
   output_file_mode = "0666"
   output_path      = "./zip/cwl2lambda.zip"
 }
@@ -84,7 +84,7 @@ resource "aws_lambda_function" "cwl_stream_lambda" {
   function_name    = "LogsToElasticsearch"
   role             = aws_iam_role.lambda_elasticsearch_execution_role.arn
   handler          = "index.handler"
-  source_code_hash = filebase64sha256(("zip/cwl2lambda.zip"))
+  source_code_hash = data.archive_file.cwl2lambdaZip.output_base64sha256
   runtime          = "nodejs14.x"
 
   environment {
@@ -92,6 +92,8 @@ resource "aws_lambda_function" "cwl_stream_lambda" {
       es_endpoint = aws_elasticsearch_domain.AWSSElasticsearch.endpoint
     }
   }
+
+  depends_on = [data.archive_file.cwl2lambdaZip]
 
   tags = {
     Name = "Cloudwatch to Opensearch lambda function"

@@ -104,9 +104,9 @@ resource "aws_sqs_queue_policy" "sendMailQueuePolicy" {
 }
 
 #Lambda function written in Python that send a mail wether a job was completed successfully or not
-data "archive_file" "lambda_my_function" {
+data "archive_file" "sendMailzip" {
   type             = "zip"
-  source_file      = "./lambdaSource/sendMail/lambda_function.py"
+  source_file      = "${path.module}/lambdaSource/sendMail/lambda_function.py"
   output_file_mode = "0666"
   output_path      = "./zip/sendMail.zip"
 }
@@ -118,10 +118,12 @@ resource "aws_lambda_function" "sendMail" {
   role          = aws_iam_role.lambdaIAM.arn
   handler       = "lambda_function.lambda_handler"
 
-  source_code_hash = filebase64sha256("zip/sendMail.zip")
+  source_code_hash = data.archive_file.sendMailzip.output_base64sha256
 
   runtime = "python3.9"
   architectures = ["arm64"]
+
+  depends_on = [data.archive_file.sendMailzip]
 
   tags = {
     Name        = "Send Mail function"
@@ -175,7 +177,7 @@ resource "aws_iam_policy" "SQSPollerPolicy" {
 resource "aws_iam_role" "lambdaIAM" {
   name = "lambdaIAM"
 
-  assume_role_policy = templatefile("./templates/LambdaRolePolicy.json", {})
+  assume_role_policy = templatefile("./templates/lambdaRolePolicy.json", {})
   managed_policy_arns = [aws_iam_policy.SQSPollerPolicy.arn]
 }
 
