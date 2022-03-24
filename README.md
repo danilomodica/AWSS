@@ -11,6 +11,7 @@ Create a .tfvars file which will contain Amazon AWS access key and secret key an
 
 ```console
 cd terraform
+terraform init
 terraform apply -auto-approve -var-file="credentials.tfvars"
 ```
 
