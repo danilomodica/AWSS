@@ -29,7 +29,6 @@ document.getElementById("get").addEventListener('click', function() {
 			}
 			else {
 				response.text().then(function (text) {
-					/* TODO: check the existence of the file in S3 in a better way */
 					if (text.includes('Error')) {
 						Swal.fire({
                             icon: 'error',
