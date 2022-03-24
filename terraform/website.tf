@@ -76,7 +76,7 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
     custom_origin_config {
       http_port              = "80"
       https_port             = "443"
-      origin_protocol_policy = "https-only"
+      origin_protocol_policy = "http-only"
       origin_ssl_protocols   = ["TLSv1", "TLSv1.1", "TLSv1.2"]
     }
   }
@@ -114,8 +114,8 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
     }
 
     min_ttl = 0
-    default_ttl = 3600
-    max_ttl = 86400
+    default_ttl = 600 # 3600
+    max_ttl = 3600 #86400
     compress = true
     viewer_protocol_policy = "redirect-to-https"
   }

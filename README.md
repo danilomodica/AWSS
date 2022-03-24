@@ -4,7 +4,7 @@ Cloud based and multi-user HPC application that measure the similarity between t
 ### Software used
 - [AWS](https://aws.amazon.com/)
 - [Bootstrap](https://getbootstrap.com/) - version 5.1.3
-- [Terraform](https://www.terraform.io/) - CLI version 1.1.7 • provider hashicorp/aws v4.5.0
+- [Terraform](https://www.terraform.io/) - CLI version 1.1.7 • provider hashicorp/aws v4.6.0
 
 ## Infrastructure building
 Create a .tfvars file which will contain Amazon AWS access key and secret key and then run as follow:
