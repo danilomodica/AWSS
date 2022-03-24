@@ -1,14 +1,6 @@
-#Credentials to access to OpenSearch dashboard
-variable "masterName" {default = "awssCloud"}
-variable "masterPass" {default = "awssCC22*"}
-
-output "elasticsearch_credentials" {
-  value = [var.masterName, var.masterPass]
-}
-
 resource "aws_elasticsearch_domain" "AWSSElasticsearch" {
   domain_name           = "awss-logs"
-  elasticsearch_version = "OpenSearch_1.1"
+  elasticsearch_version = "OpenSearch_1.2"
 
   #Temporary, it will be substituted by a cluster in different AZ
   cluster_config {
@@ -44,21 +36,7 @@ resource "aws_elasticsearch_domain" "AWSSElasticsearch" {
     }
   }
 
-    access_policies = <<CONFIG
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "AWS": "*"
-      },
-      "Action": "es:*",
-      "Resource": "arn:aws:es:eu-central-1:389487414326:domain/awss-logs/*"
-    }
-  ]
-}
-  CONFIG
+  access_policies = templatefile("./templates/openSearchPolicy.json", {})
 
   tags = {
     Name = "Elasticsearch AWSS Domain"
@@ -82,7 +60,7 @@ resource "aws_lambda_function" "cwl_stream_lambda" {
   description = "Function used to stream log groups to Opensearch cluster"
   filename         = "zip/cwl2lambda.zip"
   function_name    = "LogsToElasticsearch"
-  role             = aws_iam_role.lambda_elasticsearch_execution_role.arn
+  role             = aws_iam_role.lambda_opensearch_execution_role.arn
   handler          = "index.handler"
   source_code_hash = data.archive_file.cwl2lambdaZip.output_base64sha256
   runtime          = "nodejs14.x"
@@ -99,6 +77,35 @@ resource "aws_lambda_function" "cwl_stream_lambda" {
     Name = "Cloudwatch to Opensearch lambda function"
     Environment = "Dev"
   }
+}
+
+resource "aws_iam_role" "lambda_opensearch_execution_role" {
+  name = "lambda_opensearch_execution_role"
+  description = "IAM Role for lambda used to stream to OpenSearch"
+
+  assume_role_policy = templatefile("./templates/lambdaRolePolicy.json", {})
+}
+
+resource "aws_iam_policy" "ESHTTPPolicy" {
+  name        = "ESHttpPostPolicy"
+  description = "Allow to send log data using http post request to opensearch"
+  path        = "/"
+
+  policy = templatefile("./templates/ESHttpPolicy.json", {})
+}
+
+resource "aws_iam_role_policy_attachment" "OSLogs1" {
+  role       = aws_iam_role.lambda_opensearch_execution_role.name
+  policy_arn = aws_iam_policy.lambdaLogging.arn
+}
+
+resource "aws_iam_role_policy_attachment" "OSLogs2" {
+  role       = aws_iam_role.lambda_opensearch_execution_role.name
+  policy_arn = aws_iam_policy.ESHTTPPolicy.arn
+}
+
+output "lambda_execution_role_arn" {
+  value = aws_iam_role.lambda_opensearch_execution_role.arn
 }
 
 #Cloudtrail to monitor API usage and user activity
@@ -132,8 +139,20 @@ resource "aws_cloudtrail" "cloudtrail" {
     Environment = "Dev"
   }
 
-    cloud_watch_logs_group_arn = "${aws_cloudwatch_log_group.cloudTrailLogGroup.arn}:*" # CloudTrail requires the Log Stream wildcard
-    cloud_watch_logs_role_arn = aws_iam_role.cloudTrailIAM.arn
+  cloud_watch_logs_group_arn = "${aws_cloudwatch_log_group.cloudTrailLogGroup.arn}:*" # CloudTrail requires the Log Stream wildcard
+  cloud_watch_logs_role_arn = aws_iam_role.cloudTrailIAM.arn
+}
+
+resource "aws_iam_role" "cloudTrailIAM" {
+  name = "cloudTrailIAM"
+  description = "IAM Role for CloudTrail"
+  
+  assume_role_policy = templatefile("./templates/CloudTrailRolePolicy.json", {})
+
+  inline_policy {
+    name = "CT-Policy"
+    policy = templatefile("./templates/CloudTrailLogPolicy.json", {log-group-arn = aws_cloudwatch_log_group.cloudTrailLogGroup.arn})
+  }
 }
 
 resource "aws_s3_bucket" "cloudtrail-s3bucket" { #cloudtrail bucket for logs
@@ -144,6 +163,27 @@ resource "aws_s3_bucket" "cloudtrail-s3bucket" { #cloudtrail bucket for logs
     Name        = "Cloudtrail bucket logs"
     Environment = "Dev"
   }
+}
+
+resource "aws_s3_bucket_acl" "aclCT" {
+  bucket = aws_s3_bucket.cloudtrail-s3bucket.id
+  acl    = "private"
+}
+
+resource "aws_s3_bucket_public_access_block" "accessBlockCT" {
+  bucket = aws_s3_bucket.cloudtrail-s3bucket.id
+
+  block_public_acls   = true
+  block_public_policy = true
+  restrict_public_buckets = true
+  ignore_public_acls = true
+}
+
+resource "aws_s3_bucket_policy" "CTS3BucketPolicy" {
+  bucket = aws_s3_bucket.cloudtrail-s3bucket.id
+  policy = templatefile("./templates/CloudTrailBucketPolicy.json", {bucket_name = "${aws_s3_bucket.cloudtrail-s3bucket.id}", iam = "${data.aws_caller_identity.current.account_id}"})
+
+  depends_on = [aws_s3_bucket.cloudtrail-s3bucket]
 }
 
 #Creating the cloudwatch log group that and the subscription to Opensearch
@@ -173,113 +213,4 @@ resource "aws_cloudwatch_log_subscription_filter" "cloudtrail_logfilter" {
   destination_arn = aws_lambda_function.cwl_stream_lambda.arn
 
   depends_on = [ aws_lambda_permission.cloudwatch_allow ]
-}
-
-#Poliecies and roles...
-resource "aws_iam_role" "cloudTrailIAM" {
-  name = "cloudTrailIAM"
-
-  assume_role_policy = jsonencode({
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Principal": {
-                "Service": "cloudtrail.amazonaws.com"
-            },
-            "Action": "sts:AssumeRole"
-        }
-    ]
-})
-
-  inline_policy {
-    name = "CT-Policy"
-    policy = templatefile("./templates/CloudTrailLogPolicy.json", {log-group-arn = aws_cloudwatch_log_group.cloudTrailLogGroup.arn})
-  }
-}
-
-resource "aws_iam_role" "lambda_elasticsearch_execution_role" {
-  name = "lambda_elasticsearch_execution_role"
-  assume_role_policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": "sts:AssumeRole",
-      "Principal": {
-        "Service": "lambda.amazonaws.com"
-      },
-      "Effect": "Allow"
-    }
-  ]
-}
-EOF
-}
-
-resource "aws_iam_role_policy" "lambda_elasticsearch_execution_policy" {
-  name = "lambda_elasticsearch_execution_policy"
-  role = aws_iam_role.lambda_elasticsearch_execution_role.id
-  policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "logs:CreateLogGroup",
-        "logs:CreateLogStream",
-        "logs:PutLogEvents"
-      ],
-      "Resource": [
-        "arn:aws:logs:*:*:*"
-      ]
-    },
-    {
-      "Effect": "Allow",
-      "Action": "es:ESHttpPost",
-      "Resource": "arn:aws:es:*:*:*"
-    }
-  ]
-}
-EOF
-}
-
-output "lambda_execution_role_arn" {
-  value = aws_iam_role.lambda_elasticsearch_execution_role.arn
-}
-
-resource "aws_s3_bucket_policy" "CTS3BucketPolicy" {
-  bucket = aws_s3_bucket.cloudtrail-s3bucket.id
-  depends_on = [aws_s3_bucket.cloudtrail-s3bucket]
-
-  policy = <<EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "AWSCloudTrailAclCheck20160318",
-            "Effect": "Allow",
-            "Principal": {
-              "Service": "cloudtrail.amazonaws.com"
-            },
-            "Action": "s3:GetBucketAcl",
-            "Resource": "arn:aws:s3:::cloudtrail-s3bucket-awss"
-        },
-        {
-            "Sid": "AWSCloudTrailWrite20150319",
-            "Effect": "Allow",
-            "Principal": {
-              "Service": "cloudtrail.amazonaws.com"
-            },
-            "Action": "s3:PutObject",
-            "Resource": "arn:aws:s3:::cloudtrail-s3bucket-awss/AWSLogs/${data.aws_caller_identity.current.account_id}/*",
-            "Condition": {
-                "StringEquals": {
-                    "s3:x-amz-acl": "bucket-owner-full-control"
-                }
-            }
-        }
-    ]
-}
-EOF
 }

@@ -1,26 +1,51 @@
-/* SQS Policy */
-resource "aws_iam_policy" "sqs-policy" {
-  name        = "apigw-sqsQueue"
-  description = "Policy to put messages into SQS"
+/* S3 Bucket that contains input files to be elaborated */
+resource "aws_s3_bucket" "AWSSInputFiles" {
+  bucket = "awss-input-files"
+  force_destroy = true
 
-  policy = templatefile("./templates/sqs.json", { sqs = "${aws_sqs_queue.inputFIFOQueue.arn}"})
+  tags = {
+    Name        = "Input files bucket"
+    Environment = "Dev"
+  }
 }
 
-/* SQS IAM Role */
-resource "aws_iam_role" "apigateway-sqs-role" {
-  name = "apigw-send-msg-sqs"
-
-  assume_role_policy = templatefile("./templates/apiGateway.json", {})
+resource "aws_s3_bucket_acl" "aclInputs" {
+  bucket = aws_s3_bucket.AWSSInputFiles.id
+  acl    = "private"
 }
 
-/* SQS Role - Policy attachments */
-resource "aws_iam_role_policy_attachment" "role-policy-attachment1" {
-  role       = aws_iam_role.apigateway-sqs-role.name
-  policy_arn = aws_iam_policy.sqs-policy.arn
+resource "aws_s3_bucket_public_access_block" "accessBlockInputs" {
+  bucket = aws_s3_bucket.AWSSInputFiles.id
+
+  block_public_acls   = true
+  block_public_policy = true
+  restrict_public_buckets = true
+  ignore_public_acls = true
 }
-resource "aws_iam_role_policy_attachment" "role-policy-attachment2" {
-  role       = aws_iam_role.apigateway-sqs-role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+
+/* S3 Bucket that will contain resulting matched substrings */
+resource "aws_s3_bucket" "AWSSResultFiles" {
+  bucket = "awss-result-files"
+  force_destroy = true
+
+  tags = {
+    Name        = "Result files bucket"
+    Environment = "Dev"
+  }
+}
+
+resource "aws_s3_bucket_acl" "aclResults" {
+  bucket = aws_s3_bucket.AWSSResultFiles.id
+  acl    = "private"
+}
+
+resource "aws_s3_bucket_public_access_block" "accessBlockResults" {
+  bucket = aws_s3_bucket.AWSSResultFiles.id
+
+  block_public_acls   = true
+  block_public_policy = true
+  restrict_public_buckets = true
+  ignore_public_acls = true
 }
 
 # FIFO queue that contains jobs to be elaborated
@@ -42,24 +67,17 @@ resource "aws_sqs_queue" "inputFIFOQueue" {
   }
 }
 
-# https://github.com/hashicorp/terraform-provider-aws/issues/13980
-resource "time_sleep" "wait_60_seconds_1" {
-  depends_on = [aws_sqs_queue.inputFIFOQueue]
-  create_duration  = "60s"
-}
-
 resource "aws_sqs_queue_policy" "inputFIFOQueuePolicy" {
   queue_url = aws_sqs_queue.inputFIFOQueue.id
 
   policy = templatefile("./templates/SQSFifoPolicy.json", { 
     region = "${var.region}", 
     iam = "${data.aws_caller_identity.current.account_id}",
-    queue_name = "inputMsgQueue.fifo", 
+    queue_name = "${aws_sqs_queue.inputFIFOQueue.id}", 
     role_name = "${aws_iam_role.apigateway-sqs-role.name}"
   })
 
   depends_on = [
-    time_sleep.wait_60_seconds_1,
     data.aws_caller_identity.current,
     aws_iam_role.apigateway-sqs-role
   ]
@@ -82,12 +100,6 @@ resource "aws_sqs_queue" "sendMailQueue" {
   }
 }
 
-# https://github.com/hashicorp/terraform-provider-aws/issues/13980
-resource "time_sleep" "wait_60_seconds_2" {
-  depends_on = [aws_sqs_queue.sendMailQueue]
-  create_duration  = "60s"
-}
-
 resource "aws_sqs_queue_policy" "sendMailQueuePolicy" {
   queue_url = aws_sqs_queue.sendMailQueue.id
 
@@ -97,10 +109,7 @@ resource "aws_sqs_queue_policy" "sendMailQueuePolicy" {
     queue_name = "sendMailQueue" 
   })
 
-  depends_on = [
-    time_sleep.wait_60_seconds_2,
-    data.aws_caller_identity.current
-  ]
+  depends_on = [data.aws_caller_identity.current]
 }
 
 #Lambda function written in Python that send a mail wether a job was completed successfully or not
@@ -115,7 +124,7 @@ resource "aws_lambda_function" "sendMail" {
   description = "Function that notify the user about his job execution"
   filename      = "zip/sendMail.zip"
   function_name = "sendMail"
-  role          = aws_iam_role.lambdaIAM.arn
+  role          = aws_iam_role.lambdaSQSRole.arn
   handler       = "lambda_function.lambda_handler"
 
   source_code_hash = data.archive_file.sendMailzip.output_base64sha256
@@ -170,26 +179,32 @@ resource "aws_lambda_event_source_mapping" "eventSourceMapping" {
 #Useful policies and roles to have a working trigger (SQS) for Lambda
 resource "aws_iam_policy" "SQSPollerPolicy" {
   name = "SQSPollerExecutionRole"
+  description = "Policy to allow polling actions to lambdas"
 
   policy = templatefile("./templates/SQSPollerExecutionRole.json", {})
 }
 
-resource "aws_iam_role" "lambdaIAM" {
-  name = "lambdaIAM"
-
-  assume_role_policy = templatefile("./templates/lambdaRolePolicy.json", {})
-  managed_policy_arns = [aws_iam_policy.SQSPollerPolicy.arn]
-}
-
 resource "aws_iam_policy" "lambdaLogging" {
   name        = "lambdaLogging"
-  path        = "/"
   description = "IAM policy for logging from a lambda"
+  path        = "/"
 
   policy = templatefile("./templates/SQSLambdaLogging.json", {})
 }
 
-resource "aws_iam_role_policy_attachment" "lambdaLogs" {
-  role       = aws_iam_role.lambdaIAM.name
+resource "aws_iam_role" "lambdaSQSRole" {
+  name = "lambdaSQSRole"
+  description = "Lambda role to give sqs polling and logging permission to lambdas"
+
+  assume_role_policy = templatefile("./templates/lambdaRolePolicy.json", {})
+}
+
+resource "aws_iam_role_policy_attachment" "lambdaLogs1" {
+  role       = aws_iam_role.lambdaSQSRole.name
   policy_arn = aws_iam_policy.lambdaLogging.arn
+}
+
+resource "aws_iam_role_policy_attachment" "lambdaLogs2" {
+  role       = aws_iam_role.lambdaSQSRole.name
+  policy_arn = aws_iam_policy.SQSPollerPolicy.arn
 }

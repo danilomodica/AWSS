@@ -1,51 +1,26 @@
-/* S3 Bucket that contains input files to be elaborated */
-resource "aws_s3_bucket" "AWSSInputFiles" {
-  bucket = "awss-input-files"
-  force_destroy = true
+/* SQS Policy */
+resource "aws_iam_policy" "sqs-policy" {
+  name        = "apigw-sqsQueue"
+  description = "Policy to put messages into SQS"
 
-  tags = {
-    Name        = "Input files bucket"
-    Environment = "Dev"
-  }
+  policy = templatefile("./templates/SQSApiGWPolicy.json", { sqs = "${aws_sqs_queue.inputFIFOQueue.arn}"})
 }
 
-resource "aws_s3_bucket_acl" "aclInputs" {
-  bucket = aws_s3_bucket.AWSSInputFiles.id
-  acl    = "private"
+/* SQS IAM Role */
+resource "aws_iam_role" "apigateway-sqs-role" {
+  name = "apigw-send-msg-sqs"
+
+  assume_role_policy = templatefile("./templates/apiGateway.json", {})
 }
 
-resource "aws_s3_bucket_public_access_block" "accessBlockInputs" {
-  bucket = aws_s3_bucket.AWSSInputFiles.id
-
-  block_public_acls   = true
-  block_public_policy = true
-  restrict_public_buckets = true
-  ignore_public_acls = true
+/* SQS Role - Policy attachments */
+resource "aws_iam_role_policy_attachment" "role-policy-attachment1" {
+  role       = aws_iam_role.apigateway-sqs-role.name
+  policy_arn = aws_iam_policy.sqs-policy.arn
 }
-
-/* S3 Bucket that will contain resulting matched substrings */
-resource "aws_s3_bucket" "AWSSResultFiles" {
-  bucket = "awss-result-files"
-  force_destroy = true
-
-  tags = {
-    Name        = "Result files bucket"
-    Environment = "Dev"
-  }
-}
-
-resource "aws_s3_bucket_acl" "aclResults" {
-  bucket = aws_s3_bucket.AWSSResultFiles.id
-  acl    = "private"
-}
-
-resource "aws_s3_bucket_public_access_block" "accessBlockResults" {
-  bucket = aws_s3_bucket.AWSSResultFiles.id
-
-  block_public_acls   = true
-  block_public_policy = true
-  restrict_public_buckets = true
-  ignore_public_acls = true
+resource "aws_iam_role_policy_attachment" "role-policy-attachment2" {
+  role       = aws_iam_role.apigateway-sqs-role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
 }
 
 /* IAM Policies */
@@ -491,7 +466,7 @@ resource "aws_api_gateway_method_settings" "stage-settings" {
 }
 
 resource "aws_cloudwatch_log_group" "apigw-log-group" {
-  name              = "API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.apigw.id}/${aws_api_gateway_deployment.apigw-deployment.stage_name}"
+  name              = "/aws/apigw/${aws_api_gateway_rest_api.apigw.name}"
   retention_in_days = 90
 }
 
@@ -503,7 +478,7 @@ resource "aws_lambda_permission" "cloudwatch_apigw_allow" {
   source_arn = "${aws_cloudwatch_log_group.apigw-log-group.arn}:*"
 }
 
-resource "aws_cloudwatch_log_subscription_filter" "cloudtrail_logfilter" {
+resource "aws_cloudwatch_log_subscription_filter" "apigw_logfilter" {
   name            = "cloudtrail_logsubscription"
   log_group_name  = aws_cloudwatch_log_group.apigw-log-group.name
   filter_pattern  = ""
