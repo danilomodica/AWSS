@@ -61,8 +61,35 @@ resource "aws_sqs_queue" "inputFIFOQueue" {
   delay_seconds             = 0
   visibility_timeout_seconds = 10
 
+    redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.inputFIFOQueue_Deadletter.arn
+    maxReceiveCount     = 100
+  })
+  redrive_allow_policy = jsonencode({
+    redrivePermission = "byQueue",
+    sourceQueueArns   = ["${aws_sqs_queue.inputFIFOQueue_Deadletter.arn}"]
+  })
+
   tags = {
     Name = "Input info queue"
+    Environment = "Dev"
+  }
+}
+
+resource "aws_sqs_queue" "inputFIFOQueue_Deadletter" {
+  name                        = "inputMsgQueue_DLQ.fifo"
+  fifo_queue                  = true
+  content_based_deduplication = true
+  sqs_managed_sse_enabled     = true
+  
+  receive_wait_time_seconds = 10
+  message_retention_seconds = 345600
+  max_message_size          = 262144 
+  delay_seconds             = 0
+  visibility_timeout_seconds = 10
+
+  tags = {
+    Name = "Input info DLQ Queue"
     Environment = "Dev"
   }
 }
@@ -94,8 +121,33 @@ resource "aws_sqs_queue" "sendMailQueue" {
   delay_seconds             = 0
   visibility_timeout_seconds = 30
 
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.sendMailQueue_deadLetter.arn
+    maxReceiveCount     = 100
+  })
+  redrive_allow_policy = jsonencode({
+    redrivePermission = "byQueue",
+    sourceQueueArns   = ["${aws_sqs_queue.sendMailQueue_deadLetter.arn}"]
+  })
+
   tags = {
     Name = "Send Mail function queue"
+    Environment = "Dev"
+  }
+}
+
+resource "aws_sqs_queue" "sendMailQueue_deadLetter" {
+  name                        = "sendMailQueue_DLQ"
+  sqs_managed_sse_enabled     = true
+  
+  receive_wait_time_seconds = 20
+  message_retention_seconds = 86400
+  max_message_size          = 24576
+  delay_seconds             = 0
+  visibility_timeout_seconds = 30
+
+  tags = {
+    Name = "Send Mail DLQ Queue"
     Environment = "Dev"
   }
 }
