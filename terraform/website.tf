@@ -250,8 +250,15 @@ resource "aws_cloudwatch_metric_alarm" "r53_alarm" {
 }
 
 resource "aws_sns_topic" "topic" { #used to send advice to a predefined email address (to be set)
-  name     = "R53-healthcheck"
   provider = aws.us-east-1
+  name     = "R53-healthcheck"
+}
+
+resource "aws_sns_topic_subscription" "email-target" {
+  provider = aws.us-east-1
+  topic_arn = aws_sns_topic.topic.arn
+  protocol  = "email"
+  endpoint  = "${var.email}"
 }
 
 #Route53 query log group and subscription to Opensearch
