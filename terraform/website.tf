@@ -162,6 +162,78 @@ resource "aws_s3_bucket_public_access_block" "CFaccessBlock" {
   ignore_public_acls = true
 }
 
+resource "aws_s3_bucket_notification" "CFbucket-trigger" {
+  bucket = aws_s3_bucket.CFLogs.id
+
+  lambda_function {
+      lambda_function_arn = aws_lambda_function.CFlogsStreamLambda.arn
+      events              = ["s3:ObjectCreated:*"]
+      filter_prefix       = "logs/"
+      filter_suffix       = ".log"
+  }
+
+  depends_on = [aws_lambda_permission.bucketinvoking_allow]
+}
+
+resource "aws_lambda_permission" "bucketinvoking_allow" {
+  statement_id = "s32lambda_allow"
+  action = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.CFlogsStreamLambda.function_name
+  principal = "s3.amazonaws.com"
+  source_arn = "${aws_s3_bucket.CFLogs.arn}"
+}
+
+resource "aws_lambda_function" "CFlogsStreamLambda" {
+  description = "Lambda function to stream Cloudfront logs to OpenSearch"
+  filename      = "lambdaSource/cflogslambda.zip"
+  function_name = "s3-log-indexing"
+  handler       = "sample.handler"
+  role          = aws_iam_role.lambdaS32OSRole.arn
+
+  source_code_hash = filebase64sha256("lambdaSource/cflogslambda.zip")
+
+  runtime = "python3.9"
+  architectures = ["arm64"]
+
+  environment {
+    variables = {
+      host = aws_elasticsearch_domain.AWSSElasticsearch.endpoint
+      region = var.region
+    }
+  }
+
+  tags = {
+    Name        = "CF S3 to OpenSearch function"
+    Environment = "Dev"
+  }
+}
+
+output "lambdaS32OS_execution_role_arn" {
+  value = aws_iam_role.lambdaS32OSRole.arn
+}
+
+resource "aws_iam_role" "lambdaS32OSRole" {
+  name = "lambdaS32OSRole"
+  description = "Lambda role to give s3 read-only and opensearch permissions to lambdas"
+
+  assume_role_policy = templatefile("./templates/lambdaRolePolicy.json", {})
+}
+
+resource "aws_iam_role_policy_attachment" "RO-attach1" {
+  role       = aws_iam_role.lambdaS32OSRole.name
+  policy_arn = aws_iam_policy.s3-get-policy.arn
+}
+
+resource "aws_iam_role_policy_attachment" "ES-attach2" {
+  role       = aws_iam_role.lambdaS32OSRole.name
+  policy_arn = aws_iam_policy.ESHTTPPolicy.arn
+}
+
+resource "aws_iam_role_policy_attachment" "lambdaLogs3" {
+  role       = aws_iam_role.lambdaS32OSRole.name
+  policy_arn = aws_iam_policy.lambdaLogging.arn
+}
+
 #Adding domain to Route53 redirecting to Cloudfront resources
 resource "aws_route53_zone" "route53_zone" {
   name = var.website_url
