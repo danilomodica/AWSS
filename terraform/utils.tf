@@ -241,7 +241,7 @@ resource "aws_iam_policy" "lambdaLogging" {
   description = "IAM policy for logging from a lambda"
   path        = "/"
 
-  policy = templatefile("./templates/SQSLambdaLogging.json", {})
+  policy = templatefile("./templates/lambdaLogging.json", {})
 }
 
 resource "aws_iam_role" "lambdaSQSRole" {
