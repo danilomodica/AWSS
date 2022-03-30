@@ -1,4 +1,4 @@
-/* To test locally, comment the code below and replace api_url in this document with API url manually */
+/* To test locally, comment the code below and replace api_url variable in this document with API url manually */
 var api_url = '';
 fetch('/assets/url.json')
 .then(response => response.json())
@@ -11,17 +11,26 @@ document.getElementById("get").addEventListener('click', function() {
 	var bucket = 'awss-result-files';
 	var id = document.getElementById('resultID').value;
 	var filename = id + '.txt';
-	var url = api_url + '/' + bucket + '/' + filename;
+	var s3Url;
+	var url = api_url + '/' + bucket + '?filename=' + filename;
 		
     /* File Retrieving */
 	if (id != '') {
+		Swal.fire({
+			title: 'Please Wait !',
+			html: 'Downloading your file...',
+			allowOutsideClick: false,
+			didOpen: () => {
+				Swal.showLoading()
+			},
+		});
+
         fetch(url, {
             method: 'GET'
         })
 		.then(response => {
-            console.log(response);
-
             if (!response.ok) {
+				swal.close();
 				Swal.fire({
                     icon: 'error',
                     title: response.status + ' ' + response.statusText
@@ -29,36 +38,55 @@ document.getElementById("get").addEventListener('click', function() {
 			}
 			else {
 				response.text().then(function (text) {
-					if (text.includes('Error')) {
+					s3Url = JSON.parse(text);
+					
+					fetch(s3Url.URL, {
+						method: 'GET'
+					})
+					.then(response => {			
+						if (!response.ok) {
+							swal.close();
+							Swal.fire({
+								icon: 'error',
+								title: response.status + ' ' + response.statusText,
+								text: 'Please use the ID you received in your mailbox'
+							});
+						}
+						else {
+							response.text().then(function (text) {
+								/* File Downloading */
+								var element = document.createElement('a');
+								element.setAttribute('href', 'data:application/octet-stream;charset=utf-8,' + encodeURIComponent(text));
+								element.setAttribute('download', 'result.txt');
+
+								element.style.display = 'none';
+								document.body.appendChild(element);
+
+								swal.close();
+								element.click();
+
+								document.body.removeChild(element);
+							});
+						}
+					})
+					.catch((error) => {
+						swal.close();
 						Swal.fire({
-                            icon: 'error',
-                            title: 'File Not Found',
-                            text: 'Please use the ID you received in your mailbox'
-                        });
-					}
-					else {
-                        /* File Downloading */
-						var element = document.createElement('a');
-						element.setAttribute('href', 'data:application/octet-stream;charset=utf-8,' + encodeURIComponent(text));
-						element.setAttribute('download', 'result.txt');
-
-						element.style.display = 'none';
-						document.body.appendChild(element);
-
-						element.click();
-
-						document.body.removeChild(element);
-					}
-				 });
+							icon: 'error',
+							title: 'API Server Error',
+							text: error.message
+						});
+					});
+				});
 			}
         })
 		.catch((error) => {
+			swal.close();
 			Swal.fire({
                 icon: 'error',
-                title: 'Check your API',
+                title: 'API Server Error',
                 text: error.message
             });
-			console.log(error);
 		});
     }
     else {
