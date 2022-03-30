@@ -23,6 +23,18 @@ resource "aws_s3_bucket_public_access_block" "accessBlockInputs" {
   ignore_public_acls = true
 }
 
+resource "aws_s3_bucket_cors_configuration" "corsInputs" {
+  bucket = aws_s3_bucket.AWSSInputFiles.bucket
+
+  cors_rule {
+    allowed_headers = ["Authorization"]
+    allowed_methods = ["GET", "PUT"]
+    allowed_origins = ["*"]
+    expose_headers  = [""]
+    max_age_seconds = 3000
+  }
+}
+
 /* S3 Bucket that will contain resulting matched substrings */
 resource "aws_s3_bucket" "AWSSResultFiles" {
   bucket = "awss-result-files"
@@ -46,6 +58,18 @@ resource "aws_s3_bucket_public_access_block" "accessBlockResults" {
   block_public_policy = true
   restrict_public_buckets = true
   ignore_public_acls = true
+}
+
+resource "aws_s3_bucket_cors_configuration" "corsResults" {
+  bucket = aws_s3_bucket.AWSSResultFiles.bucket
+
+  cors_rule {
+    allowed_headers = ["Authorization"]
+    allowed_methods = ["GET", "PUT"]
+    allowed_origins = ["*"]
+    expose_headers  = [""]
+    max_age_seconds = 3000
+  }
 }
 
 # FIFO queue that contains jobs to be elaborated
@@ -162,6 +186,88 @@ resource "aws_sqs_queue_policy" "sendMailQueuePolicy" {
   })
 
   depends_on = [data.aws_caller_identity.current]
+}
+
+/* Lambda to get signed URL from S3 bucket to get objects */
+data "archive_file" "urlSignerGet" {
+  type             = "zip"
+  source_file      = "${path.module}/lambdaSource/urlSignerGet/lambda_function.py"
+  output_file_mode = "0666"
+  output_path      = "./zip/urlSignerGet.zip"
+}
+
+resource "aws_lambda_function" "getS3lambda" {
+  description   = "Function that generates signed url to get objects from S3 bucket"
+  filename      = "zip/urlSignerGet.zip"
+  function_name = "urlSignerGet"
+  role          = aws_iam_role.s3-lambda-role.arn
+  handler       = "lambda_function.lambda_handler"
+
+  source_code_hash = data.archive_file.urlSignerGet.output_base64sha256
+
+  runtime = "python3.9"
+  architectures = ["x86_64"]
+
+  depends_on = [data.archive_file.urlSignerGet]
+
+  tags = {
+    Name        = "Url Signer Get function "
+    Environment = "Dev"
+  }
+}
+
+/* Lambda to get signed URL from S3 bucket to upload objects */
+data "archive_file" "urlSignerPut" {
+  type             = "zip"
+  source_file      = "${path.module}/lambdaSource/urlSignerPut/lambda_function.py"
+  output_file_mode = "0666"
+  output_path      = "./zip/urlSignerPut.zip"
+}
+
+resource "aws_lambda_function" "putS3lambda" {
+  description   = "Function that generates signed url to put objects into S3 bucket"
+  filename      = "zip/urlSignerPut.zip"
+  function_name = "urlSignerPut"
+  role          = aws_iam_role.s3-lambda-role.arn
+  handler       = "lambda_function.lambda_handler"
+
+  source_code_hash = data.archive_file.urlSignerPut.output_base64sha256
+
+  runtime = "python3.9"
+  architectures = ["x86_64"]
+
+  depends_on = [data.archive_file.urlSignerPut]
+
+  tags = {
+    Name        = "Url Signer Put function "
+    Environment = "Dev"
+  }
+}
+
+/* Lambda Permissions */
+resource "aws_lambda_permission" "allow_api1" {
+  statement_id  = "AllowAPIgatewayInvokation"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.getS3lambda.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn = "arn:aws:execute-api:${var.region}:${data.aws_caller_identity.current.account_id}:${aws_api_gateway_rest_api.apigw.id}/*/GET/*"
+}
+resource "aws_lambda_permission" "allow_api2" {
+  statement_id  = "AllowAPIgatewayInvokation"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.putS3lambda.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn = "arn:aws:execute-api:${var.region}:${data.aws_caller_identity.current.account_id}:${aws_api_gateway_rest_api.apigw.id}/*/POST/*"
+}
+
+/* Lambda Log groups */
+resource "aws_cloudwatch_log_group" "getS3LambdaLogGroup" {
+  name              = "/aws/lambda/${aws_lambda_function.getS3lambda.function_name}"
+  retention_in_days = 90
+}
+resource "aws_cloudwatch_log_group" "putS3LambdaLogGroup" {
+  name              = "/aws/lambda/${aws_lambda_function.putS3lambda.function_name}"
+  retention_in_days = 90
 }
 
 #Lambda function written in Python that send a mail wether a job was completed successfully or not
