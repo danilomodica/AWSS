@@ -1,7 +1,7 @@
 FROM ubuntu:latest
 WORKDIR /app
 COPY ./webServer ./
-ENV DEBIAN_FRONTEND noninteractive
+# ENV DEBIAN_FRONTEND noninteractive
 ENV FLASK_APP webServer
 ENV FLASK_RUN_HOST 127.0.0.1
 RUN apt update && \
@@ -12,8 +12,9 @@ RUN gcc -O2 -fopenmp ./lcs_algorithm.c -o ./lcs.exe
 RUN pip install boto3
 RUN pip install awscli
 RUN pip install requests
-EXPOSE 3000
+EXPOSE 5000
 # RUN pip install
-# CMD ["python3", "-m", "flask", "run","-h","0.0.0.0","-p","5000"]
+CMD ["python3", "-m", "flask", "run","-h","0.0.0.0","-p","5000"]
 # CMD ["python3", "-m", "request.py"]
 # CMD ["echo","dp"]
+# CMD ["/bin/bash"]
