@@ -221,7 +221,7 @@ resource "aws_iam_role" "lambdaS32OSRole" {
 
 resource "aws_iam_role_policy_attachment" "RO-attach1" {
   role       = aws_iam_role.lambdaS32OSRole.name
-  policy_arn = aws_iam_policy.s3-get-policy.arn
+  policy_arn = aws_iam_policy.get-s3-lambda-policy.arn
 }
 
 resource "aws_iam_role_policy_attachment" "ES-attach2" {
