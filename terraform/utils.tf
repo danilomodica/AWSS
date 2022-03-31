@@ -1,6 +1,6 @@
 /* S3 Bucket that contains input files to be elaborated */
 resource "aws_s3_bucket" "AWSSInputFiles" {
-  bucket = "awss-input-files"
+  bucket        = "awss-input-files"
   force_destroy = true
 
   tags = {
@@ -17,10 +17,10 @@ resource "aws_s3_bucket_acl" "aclInputs" {
 resource "aws_s3_bucket_public_access_block" "accessBlockInputs" {
   bucket = aws_s3_bucket.AWSSInputFiles.id
 
-  block_public_acls   = true
-  block_public_policy = true
+  block_public_acls       = true
+  block_public_policy     = true
   restrict_public_buckets = true
-  ignore_public_acls = true
+  ignore_public_acls      = true
 }
 
 resource "aws_s3_bucket_cors_configuration" "corsInputs" {
@@ -37,7 +37,7 @@ resource "aws_s3_bucket_cors_configuration" "corsInputs" {
 
 /* S3 Bucket that will contain resulting matched substrings */
 resource "aws_s3_bucket" "AWSSResultFiles" {
-  bucket = "awss-result-files"
+  bucket        = "awss-result-files"
   force_destroy = true
 
   tags = {
@@ -54,10 +54,10 @@ resource "aws_s3_bucket_acl" "aclResults" {
 resource "aws_s3_bucket_public_access_block" "accessBlockResults" {
   bucket = aws_s3_bucket.AWSSResultFiles.id
 
-  block_public_acls   = true
-  block_public_policy = true
+  block_public_acls       = true
+  block_public_policy     = true
   restrict_public_buckets = true
-  ignore_public_acls = true
+  ignore_public_acls      = true
 }
 
 resource "aws_s3_bucket_cors_configuration" "corsResults" {
@@ -78,14 +78,14 @@ resource "aws_sqs_queue" "inputFIFOQueue" {
   fifo_queue                  = true
   content_based_deduplication = true
   sqs_managed_sse_enabled     = true
-  
-  receive_wait_time_seconds = 10
-  message_retention_seconds = 345600
-  max_message_size          = 262144 
-  delay_seconds             = 0
+
+  receive_wait_time_seconds  = 10
+  message_retention_seconds  = 345600
+  max_message_size           = 262144
+  delay_seconds              = 0
   visibility_timeout_seconds = 10
 
-    redrive_policy = jsonencode({
+  redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.inputFIFOQueue_Deadletter.arn
     maxReceiveCount     = 100
   })
@@ -95,7 +95,7 @@ resource "aws_sqs_queue" "inputFIFOQueue" {
   })
 
   tags = {
-    Name = "Input info queue"
+    Name        = "Input info queue"
     Environment = "Dev"
   }
 }
@@ -105,15 +105,15 @@ resource "aws_sqs_queue" "inputFIFOQueue_Deadletter" {
   fifo_queue                  = true
   content_based_deduplication = true
   sqs_managed_sse_enabled     = true
-  
-  receive_wait_time_seconds = 10
-  message_retention_seconds = 345600
-  max_message_size          = 262144 
-  delay_seconds             = 0
+
+  receive_wait_time_seconds  = 10
+  message_retention_seconds  = 345600
+  max_message_size           = 262144
+  delay_seconds              = 0
   visibility_timeout_seconds = 10
 
   tags = {
-    Name = "Input info DLQ Queue"
+    Name        = "Input info DLQ Queue"
     Environment = "Dev"
   }
 }
@@ -121,11 +121,11 @@ resource "aws_sqs_queue" "inputFIFOQueue_Deadletter" {
 resource "aws_sqs_queue_policy" "inputFIFOQueuePolicy" {
   queue_url = aws_sqs_queue.inputFIFOQueue.id
 
-  policy = templatefile("./templates/SQSFifoPolicy.json", { 
-    region = "${var.region}", 
-    iam = "${data.aws_caller_identity.current.account_id}",
-    queue_name = "${aws_sqs_queue.inputFIFOQueue.id}", 
-    role_name = "${aws_iam_role.apigateway-sqs-role.name}"
+  policy = templatefile("./templates/SQSFifoPolicy.json", {
+    region     = "${var.region}",
+    iam        = "${data.aws_caller_identity.current.account_id}",
+    queue_name = "${aws_sqs_queue.inputFIFOQueue.id}",
+    role_name  = "${aws_iam_role.apigateway-sqs-role.name}"
   })
 
   depends_on = [
@@ -136,13 +136,13 @@ resource "aws_sqs_queue_policy" "inputFIFOQueuePolicy" {
 
 # Queue with information to send mails about the result of a job execution
 resource "aws_sqs_queue" "sendMailQueue" {
-  name                        = "sendMailQueue"
-  sqs_managed_sse_enabled     = true
-  
-  receive_wait_time_seconds = 20
-  message_retention_seconds = 86400
-  max_message_size          = 24576
-  delay_seconds             = 0
+  name                    = "sendMailQueue"
+  sqs_managed_sse_enabled = true
+
+  receive_wait_time_seconds  = 20
+  message_retention_seconds  = 86400
+  max_message_size           = 24576
+  delay_seconds              = 0
   visibility_timeout_seconds = 30
 
   redrive_policy = jsonencode({
@@ -155,23 +155,23 @@ resource "aws_sqs_queue" "sendMailQueue" {
   })
 
   tags = {
-    Name = "Send Mail function queue"
+    Name        = "Send Mail function queue"
     Environment = "Dev"
   }
 }
 
 resource "aws_sqs_queue" "sendMailQueue_deadLetter" {
-  name                        = "sendMailQueue_DLQ"
-  sqs_managed_sse_enabled     = true
-  
-  receive_wait_time_seconds = 20
-  message_retention_seconds = 86400
-  max_message_size          = 24576
-  delay_seconds             = 0
+  name                    = "sendMailQueue_DLQ"
+  sqs_managed_sse_enabled = true
+
+  receive_wait_time_seconds  = 20
+  message_retention_seconds  = 86400
+  max_message_size           = 24576
+  delay_seconds              = 0
   visibility_timeout_seconds = 30
 
   tags = {
-    Name = "Send Mail DLQ Queue"
+    Name        = "Send Mail DLQ Queue"
     Environment = "Dev"
   }
 }
@@ -179,10 +179,10 @@ resource "aws_sqs_queue" "sendMailQueue_deadLetter" {
 resource "aws_sqs_queue_policy" "sendMailQueuePolicy" {
   queue_url = aws_sqs_queue.sendMailQueue.id
 
-  policy = templatefile("./templates/SQSStandardPolicy.json", { 
-    region = "${var.region}", 
-    iam = "${data.aws_caller_identity.current.account_id}",
-    queue_name = "sendMailQueue" 
+  policy = templatefile("./templates/SQSStandardPolicy.json", {
+    region     = "${var.region}",
+    iam        = "${data.aws_caller_identity.current.account_id}",
+    queue_name = "sendMailQueue"
   })
 
   depends_on = [data.aws_caller_identity.current]
@@ -205,7 +205,7 @@ resource "aws_lambda_function" "getS3lambda" {
 
   source_code_hash = data.archive_file.urlSignerGet.output_base64sha256
 
-  runtime = "python3.9"
+  runtime       = "python3.9"
   architectures = ["x86_64"]
 
   depends_on = [data.archive_file.urlSignerGet]
@@ -233,7 +233,7 @@ resource "aws_lambda_function" "putS3lambda" {
 
   source_code_hash = data.archive_file.urlSignerPut.output_base64sha256
 
-  runtime = "python3.9"
+  runtime       = "python3.9"
   architectures = ["x86_64"]
 
   depends_on = [data.archive_file.urlSignerPut]
@@ -250,14 +250,14 @@ resource "aws_lambda_permission" "allow_api1" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.getS3lambda.function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn = "arn:aws:execute-api:${var.region}:${data.aws_caller_identity.current.account_id}:${aws_api_gateway_rest_api.apigw.id}/*/GET/*"
+  source_arn    = "arn:aws:execute-api:${var.region}:${data.aws_caller_identity.current.account_id}:${aws_api_gateway_rest_api.apigw.id}/*/GET/*"
 }
 resource "aws_lambda_permission" "allow_api2" {
   statement_id  = "AllowAPIgatewayInvokation"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.putS3lambda.function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn = "arn:aws:execute-api:${var.region}:${data.aws_caller_identity.current.account_id}:${aws_api_gateway_rest_api.apigw.id}/*/POST/*"
+  source_arn    = "arn:aws:execute-api:${var.region}:${data.aws_caller_identity.current.account_id}:${aws_api_gateway_rest_api.apigw.id}/*/POST/*"
 }
 
 /* Lambda Log groups */
@@ -279,7 +279,7 @@ data "archive_file" "sendMailzip" {
 }
 
 resource "aws_lambda_function" "sendMail" {
-  description = "Function that notify the user about his job execution"
+  description   = "Function that notify the user about his job execution"
   filename      = "zip/sendMail.zip"
   function_name = "sendMail"
   role          = aws_iam_role.lambdaSQSRole.arn
@@ -287,7 +287,7 @@ resource "aws_lambda_function" "sendMail" {
 
   source_code_hash = data.archive_file.sendMailzip.output_base64sha256
 
-  runtime = "python3.9"
+  runtime       = "python3.9"
   architectures = ["arm64"]
 
   depends_on = [data.archive_file.sendMailzip]
@@ -310,11 +310,11 @@ resource "aws_cloudwatch_log_group" "sendMailLogGroup" {
 }
 
 resource "aws_lambda_permission" "cloudwatch_sendMail_allow" {
-  statement_id = "cloudwatch_sendMail_allow"
-  action = "lambda:InvokeFunction"
+  statement_id  = "cloudwatch_sendMail_allow"
+  action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.cwl_stream_lambda.function_name
-  principal = "logs.eu-central-1.amazonaws.com"
-  source_arn = "${aws_cloudwatch_log_group.sendMailLogGroup.arn}:*"
+  principal     = "logs.eu-central-1.amazonaws.com"
+  source_arn    = "${aws_cloudwatch_log_group.sendMailLogGroup.arn}:*"
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "sendMail_logfilter" {
@@ -323,7 +323,7 @@ resource "aws_cloudwatch_log_subscription_filter" "sendMail_logfilter" {
   filter_pattern  = ""
   destination_arn = aws_lambda_function.cwl_stream_lambda.arn
 
-  depends_on = [ aws_lambda_permission.cloudwatch_sendMail_allow ]
+  depends_on = [aws_lambda_permission.cloudwatch_sendMail_allow]
 }
 
 #Trigger SQS to Lambda
@@ -336,7 +336,7 @@ resource "aws_lambda_event_source_mapping" "eventSourceMapping" {
 
 #Useful policies and roles to have a working trigger (SQS) for Lambda
 resource "aws_iam_policy" "SQSPollerPolicy" {
-  name = "SQSPollerExecutionRole"
+  name        = "SQSPollerExecutionRole"
   description = "Policy to allow polling actions to lambdas"
 
   policy = templatefile("./templates/SQSPollerExecutionRole.json", {})
@@ -351,7 +351,7 @@ resource "aws_iam_policy" "lambdaLogging" {
 }
 
 resource "aws_iam_role" "lambdaSQSRole" {
-  name = "lambdaSQSRole"
+  name        = "lambdaSQSRole"
   description = "Lambda role to give sqs polling and logging permission to lambdas"
 
   assume_role_policy = templatefile("./templates/lambdaRolePolicy.json", {})

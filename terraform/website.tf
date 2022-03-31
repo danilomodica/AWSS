@@ -1,4 +1,4 @@
-locals {mime_types = jsondecode(file("./templates/mime.json"))}
+locals { mime_types = jsondecode(file("./templates/mime.json")) }
 
 # WWW S3 BUCKET
 resource "aws_s3_bucket" "www_bucket" {
@@ -47,31 +47,31 @@ resource "aws_s3_bucket_cors_configuration" "www_bucketCORS" {
 resource "aws_s3_object" "website_files" {
   depends_on = [
     aws_api_gateway_deployment.apigw-deployment,
-    local_file.output-json]
+  local_file.output-json]
 
-  for_each      = fileset(var.upload_directory, "**/*.*")
-  bucket        = aws_s3_bucket.www_bucket.id
-  key           = replace(each.value, var.upload_directory, "")
-  source        = "${var.upload_directory}${each.value}"
-  etag          = filemd5("${var.upload_directory}${each.value}")
+  for_each     = fileset(var.upload_directory, "**/*.*")
+  bucket       = aws_s3_bucket.www_bucket.id
+  key          = replace(each.value, var.upload_directory, "")
+  source       = "${var.upload_directory}${each.value}"
+  etag         = filemd5("${var.upload_directory}${each.value}")
   content_type = lookup(local.mime_types, regex("\\.[^.]+$", each.value), null)
 }
 
 resource "aws_s3_object" "website_json_file" { //upload json file with api invoke url, cannot be combined with above resource
   depends_on = [
     aws_api_gateway_deployment.apigw-deployment,
-    local_file.output-json]
+  local_file.output-json]
 
-  bucket           = aws_s3_bucket.www_bucket.id
-  key              = replace(local_file.output-json.filename, var.upload_directory, "")
-  source           = "${local_file.output-json.filename}"
+  bucket = aws_s3_bucket.www_bucket.id
+  key    = replace(local_file.output-json.filename, var.upload_directory, "")
+  source = local_file.output-json.filename
 }
 
 # CLOUDFRONT
 resource "aws_cloudfront_distribution" "www_s3_distribution" {
   origin {
     domain_name = aws_s3_bucket.www_bucket.bucket_domain_name
-    origin_id = "S3-www.${var.bucket_name}"
+    origin_id   = "S3-www.${var.bucket_name}"
 
     custom_origin_config {
       http_port              = "80"
@@ -81,8 +81,8 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
     }
   }
 
-  enabled = true
-  is_ipv6_enabled = true
+  enabled             = true
+  is_ipv6_enabled     = true
   default_root_object = "index.html"
 
   /*custom_error_response {
@@ -92,17 +92,17 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
     response_page_path = "/404.html"
   }*/
 
-   logging_config {
+  logging_config {
     include_cookies = false
-    prefix = "logs"
-    bucket = aws_s3_bucket.CFLogs.bucket_domain_name
+    prefix          = "logs"
+    bucket          = aws_s3_bucket.CFLogs.bucket_domain_name
   }
 
   aliases = [var.website_url]
 
   default_cache_behavior {
-    allowed_methods = ["GET", "HEAD"]
-    cached_methods = ["GET", "HEAD"]
+    allowed_methods  = ["GET", "HEAD"]
+    cached_methods   = ["GET", "HEAD"]
     target_origin_id = "S3-www.${var.bucket_name}"
 
     forwarded_values {
@@ -113,10 +113,10 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
       }
     }
 
-    min_ttl = 0
-    default_ttl = 600 # 3600
-    max_ttl = 3600 #86400
-    compress = true
+    min_ttl                = 0
+    default_ttl            = 600  # 3600
+    max_ttl                = 3600 #86400
+    compress               = true
     viewer_protocol_policy = "redirect-to-https"
   }
 
@@ -127,8 +127,8 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
   }
 
   viewer_certificate {
-    acm_certificate_arn = var.acm_certificate_arn
-    ssl_support_method = "sni-only"
+    acm_certificate_arn      = var.acm_certificate_arn
+    ssl_support_method       = "sni-only"
     minimum_protocol_version = "TLSv1.2_2021"
   }
 
@@ -139,7 +139,7 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
 }
 
 resource "aws_s3_bucket" "CFLogs" {
-  bucket = "awss-cloudfront-logs"
+  bucket        = "awss-cloudfront-logs"
   force_destroy = true
 
   tags = {
@@ -156,35 +156,35 @@ resource "aws_s3_bucket_acl" "CFAcl" {
 resource "aws_s3_bucket_public_access_block" "CFaccessBlock" {
   bucket = aws_s3_bucket.CFLogs.id
 
-  block_public_acls   = true
-  block_public_policy = true
+  block_public_acls       = true
+  block_public_policy     = true
   restrict_public_buckets = true
-  ignore_public_acls = true
+  ignore_public_acls      = true
 }
 
 resource "aws_s3_bucket_notification" "CFbucket-trigger" {
   bucket = aws_s3_bucket.CFLogs.id
 
   lambda_function {
-      lambda_function_arn = aws_lambda_function.CFlogsStreamLambda.arn
-      events              = ["s3:ObjectCreated:*"]
-      filter_prefix       = "logs/"
-      filter_suffix       = ".log"
+    lambda_function_arn = aws_lambda_function.CFlogsStreamLambda.arn
+    events              = ["s3:ObjectCreated:*"]
+    filter_prefix       = "logs/"
+    filter_suffix       = ".log"
   }
 
   depends_on = [aws_lambda_permission.bucketinvoking_allow]
 }
 
 resource "aws_lambda_permission" "bucketinvoking_allow" {
-  statement_id = "s32lambda_allow"
-  action = "lambda:InvokeFunction"
+  statement_id  = "s32lambda_allow"
+  action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.CFlogsStreamLambda.function_name
-  principal = "s3.amazonaws.com"
-  source_arn = "${aws_s3_bucket.CFLogs.arn}"
+  principal     = "s3.amazonaws.com"
+  source_arn    = aws_s3_bucket.CFLogs.arn
 }
 
 resource "aws_lambda_function" "CFlogsStreamLambda" {
-  description = "Lambda function to stream Cloudfront logs to OpenSearch"
+  description   = "Lambda function to stream Cloudfront logs to OpenSearch"
   filename      = "lambdaSource/cflogslambda.zip"
   function_name = "s3-log-indexing"
   handler       = "sample.handler"
@@ -192,12 +192,12 @@ resource "aws_lambda_function" "CFlogsStreamLambda" {
 
   source_code_hash = filebase64sha256("lambdaSource/cflogslambda.zip")
 
-  runtime = "python3.9"
+  runtime       = "python3.9"
   architectures = ["arm64"]
 
   environment {
     variables = {
-      host = aws_elasticsearch_domain.AWSSElasticsearch.endpoint
+      host   = aws_elasticsearch_domain.AWSSElasticsearch.endpoint
       region = var.region
     }
   }
@@ -213,7 +213,7 @@ output "lambdaS32OS_execution_role_arn" {
 }
 
 resource "aws_iam_role" "lambdaS32OSRole" {
-  name = "lambdaS32OSRole"
+  name        = "lambdaS32OSRole"
   description = "Lambda role to give s3 read-only and opensearch permissions to lambdas"
 
   assume_role_policy = templatefile("./templates/lambdaRolePolicy.json", {})
@@ -285,7 +285,7 @@ resource "aws_route53_record" "certificateCNAME" { #For certificate
 }
 
 output "Route53_Nameservers" {
-  value = aws_route53_zone.route53_zone.name_servers
+  value       = aws_route53_zone.route53_zone.name_servers
   description = "Nameserver Route53 to be configured in the domain registrar"
 }
 
@@ -298,7 +298,7 @@ resource "aws_route53_health_check" "r53HealthCheck" {
   request_interval  = "30"
 
   tags = {
-    Name = "HTTP Health Check"
+    Name        = "HTTP Health Check"
     Environment = "Dev"
   }
 }
@@ -327,10 +327,10 @@ resource "aws_sns_topic" "topic" { #used to send advice to a predefined email ad
 }
 
 resource "aws_sns_topic_subscription" "email-target" {
-  provider = aws.us-east-1
+  provider  = aws.us-east-1
   topic_arn = aws_sns_topic.topic.arn
   protocol  = "email"
-  endpoint  = "${var.email}"
+  endpoint  = var.email
 }
 
 #Route53 query log group and subscription to Opensearch
@@ -377,11 +377,11 @@ resource "aws_cloudwatch_log_resource_policy" "route53-query-logging-policy" {
 }
 
 resource "aws_lambda_permission" "cloudwatch_r53_allow" {
-  statement_id = "cloudwatch_allow_r53"
-  action = "lambda:InvokeFunction"
+  statement_id  = "cloudwatch_allow_r53"
+  action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.cwl_stream_lambda.function_name
-  principal = "logs.us-east-1.amazonaws.com"
-  source_arn = "${aws_cloudwatch_log_group.aws_route53_cwl.arn}:*"
+  principal     = "logs.us-east-1.amazonaws.com"
+  source_arn    = "${aws_cloudwatch_log_group.aws_route53_cwl.arn}:*"
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "r53_logfilter" {
@@ -391,5 +391,5 @@ resource "aws_cloudwatch_log_subscription_filter" "r53_logfilter" {
   filter_pattern  = ""
   destination_arn = aws_lambda_function.cwl_stream_lambda.arn
 
-  depends_on = [ aws_lambda_permission.cloudwatch_r53_allow ]
+  depends_on = [aws_lambda_permission.cloudwatch_r53_allow]
 }
