@@ -22,7 +22,7 @@ def index():
 	
 	filename = "file_risultato.txt"
 	check = subprocess.check_call(["./lcs.exe",'myfile1.txt', 'myfile2.txt', "5", filename])
-	results = {**data, "exception_happened": True}	
+	results = {**data, "exception_happened": exception_happened}	
  
  
 	return results
