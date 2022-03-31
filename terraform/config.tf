@@ -5,6 +5,15 @@ terraform {
       version = "4.6"
     }
   }
+
+  backend "remote" {
+    hostname = "app.terraform.io"
+    organization = "AWSS-Cloud"
+
+    workspaces {
+      name = "AWSS"
+    }
+  }
 }
 
 variable "ak" {description = "Access key"}
