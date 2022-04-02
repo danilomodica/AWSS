@@ -102,8 +102,8 @@ resource "aws_security_group" "vpc_sec_group" {
 }*/
 
 resource "aws_iam_service_linked_role" "es" {
-    aws_service_name = "es.amazonaws.com"
-    description      = "Allows Amazon ES to manage AWS resources for a domain on your behalf."
+  aws_service_name = "es.amazonaws.com"
+  description      = "Allows Amazon ES to manage AWS resources for a domain on your behalf."
 }
 
 resource "aws_elasticsearch_domain" "AWSSElasticsearch" {
@@ -118,11 +118,11 @@ resource "aws_elasticsearch_domain" "AWSSElasticsearch" {
       availability_zone_count = 3
     }
 
-    dedicated_master_count = 3
+    dedicated_master_count   = 3
     dedicated_master_enabled = true
-    dedicated_master_type = "t3.small.elasticsearch"
+    dedicated_master_type    = "t3.small.elasticsearch"
 
-    instance_type = "t3.small.elasticsearch"
+    instance_type  = "t3.small.elasticsearch"
     instance_count = 6 #1
   }
 
@@ -134,14 +134,14 @@ resource "aws_elasticsearch_domain" "AWSSElasticsearch" {
 
   auto_tune_options {
     rollback_on_disable = "NO_ROLLBACK"
-    desired_state = "ENABLED"
+    desired_state       = "ENABLED"
 
     maintenance_schedule {
       cron_expression_for_recurrence = "cron(0 9 ? * SUN *)"
-      start_at = "2022-04-01T01:00:00Z"
+      start_at                       = "2022-04-01T01:00:00Z"
       duration {
         value = 3
-        unit = "HOURS"
+        unit  = "HOURS"
       }
     }
   }
@@ -160,37 +160,37 @@ resource "aws_elasticsearch_domain" "AWSSElasticsearch" {
   }
 
   domain_endpoint_options {
-    enforce_https = true
+    enforce_https       = true
     tls_security_policy = "Policy-Min-TLS-1-2-2019-07"
   }
 
   advanced_security_options {
-    enabled = true
+    enabled                        = true
     internal_user_database_enabled = true
     master_user_options {
-      master_user_name = var.masterName
+      master_user_name     = var.masterName
       master_user_password = var.masterPass
     }
   }
 
   log_publishing_options {
-    enabled = true
-    log_type = "INDEX_SLOW_LOGS"
+    enabled                  = true
+    log_type                 = "INDEX_SLOW_LOGS"
     cloudwatch_log_group_arn = aws_cloudwatch_log_group.openSearchLogGroup.arn
   }
   log_publishing_options {
-    enabled = true
-    log_type = "SEARCH_SLOW_LOGS"
+    enabled                  = true
+    log_type                 = "SEARCH_SLOW_LOGS"
     cloudwatch_log_group_arn = aws_cloudwatch_log_group.openSearchLogGroup.arn
   }
   log_publishing_options {
-    enabled = true
-    log_type = "ES_APPLICATION_LOGS"
+    enabled                  = true
+    log_type                 = "ES_APPLICATION_LOGS"
     cloudwatch_log_group_arn = aws_cloudwatch_log_group.openSearchLogGroup.arn
   }
   log_publishing_options {
-    enabled = true
-    log_type = "AUDIT_LOGS"
+    enabled                  = true
+    log_type                 = "AUDIT_LOGS"
     cloudwatch_log_group_arn = aws_cloudwatch_log_group.openSearchLogGroup.arn
   }
 
@@ -199,7 +199,7 @@ resource "aws_elasticsearch_domain" "AWSSElasticsearch" {
   //depends_on = [aws_vpc.log-vpc]
 
   tags = {
-    Name = "Elasticsearch AWSS Domain"
+    Name        = "Elasticsearch AWSS Domain"
     Environment = "Dev"
   }
 }
@@ -216,7 +216,7 @@ resource "aws_cloudwatch_log_group" "openSearchLogGroup" {
 }
 
 resource "aws_cloudwatch_log_resource_policy" "OSLogPolicy" {
-  policy_name = "OSLogPolicy"
+  policy_name     = "OSLogPolicy"
   policy_document = <<CONFIG
 {
   "Version": "2012-10-17",
@@ -239,11 +239,11 @@ CONFIG
 }
 
 resource "aws_lambda_permission" "opensearch_allow" {
-  statement_id = "opensearch_allow"
-  action = "lambda:InvokeFunction"
+  statement_id  = "opensearch_allow"
+  action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.cwl_stream_lambda.function_name
-  principal = "logs.eu-central-1.amazonaws.com"
-  source_arn = "${aws_cloudwatch_log_group.openSearchLogGroup.arn}:*"
+  principal     = "logs.eu-central-1.amazonaws.com"
+  source_arn    = "${aws_cloudwatch_log_group.openSearchLogGroup.arn}:*"
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "openSearch_logfilter" {
@@ -252,7 +252,7 @@ resource "aws_cloudwatch_log_subscription_filter" "openSearch_logfilter" {
   filter_pattern  = ""
   destination_arn = aws_lambda_function.cwl_stream_lambda.arn
 
-  depends_on = [ aws_lambda_permission.opensearch_allow ]
+  depends_on = [aws_lambda_permission.opensearch_allow]
 }
 
 output "elasticsearch_KibanaURL" {
@@ -268,7 +268,7 @@ data "archive_file" "cwl2lambdaZip" {
 }
 
 resource "aws_lambda_function" "cwl_stream_lambda" {
-  description = "Function used to stream log groups to Opensearch cluster"
+  description      = "Function used to stream log groups to Opensearch cluster"
   filename         = "zip/cwl2lambda.zip"
   function_name    = "LogsToElasticsearch"
   role             = aws_iam_role.lambda_opensearch_execution_role.arn
@@ -285,13 +285,13 @@ resource "aws_lambda_function" "cwl_stream_lambda" {
   depends_on = [data.archive_file.cwl2lambdaZip]
 
   tags = {
-    Name = "Cloudwatch to Opensearch lambda function"
+    Name        = "Cloudwatch to Opensearch lambda function"
     Environment = "Dev"
   }
 }
 
 resource "aws_iam_role" "lambda_opensearch_execution_role" {
-  name = "lambda_opensearch_execution_role"
+  name        = "lambda_opensearch_execution_role"
   description = "IAM Role for lambda used to stream to OpenSearch"
 
   assume_role_policy = templatefile("./templates/lambdaRolePolicy.json", {})
@@ -344,25 +344,25 @@ resource "aws_cloudtrail" "cloudtrail" {
       values = ["arn:aws:s3:::"]
     }
   }
-  
+
   tags = {
-    Name = "CloudTrail Logging"
+    Name        = "CloudTrail Logging"
     Environment = "Dev"
   }
 
   cloud_watch_logs_group_arn = "${aws_cloudwatch_log_group.cloudTrailLogGroup.arn}:*" # CloudTrail requires the Log Stream wildcard
-  cloud_watch_logs_role_arn = aws_iam_role.cloudTrailIAM.arn
+  cloud_watch_logs_role_arn  = aws_iam_role.cloudTrailIAM.arn
 }
 
 resource "aws_iam_role" "cloudTrailIAM" {
-  name = "cloudTrailIAM"
+  name        = "cloudTrailIAM"
   description = "IAM Role for CloudTrail"
-  
+
   assume_role_policy = templatefile("./templates/CloudTrailRolePolicy.json", {})
 
   inline_policy {
-    name = "CT-Policy"
-    policy = templatefile("./templates/CloudTrailLogPolicy.json", {log-group-arn = aws_cloudwatch_log_group.cloudTrailLogGroup.arn})
+    name   = "CT-Policy"
+    policy = templatefile("./templates/CloudTrailLogPolicy.json", { log-group-arn = aws_cloudwatch_log_group.cloudTrailLogGroup.arn })
   }
 }
 
@@ -384,15 +384,15 @@ resource "aws_s3_bucket_acl" "aclCT" {
 resource "aws_s3_bucket_public_access_block" "accessBlockCT" {
   bucket = aws_s3_bucket.cloudtrail-s3bucket.id
 
-  block_public_acls   = true
-  block_public_policy = true
+  block_public_acls       = true
+  block_public_policy     = true
   restrict_public_buckets = true
-  ignore_public_acls = true
+  ignore_public_acls      = true
 }
 
 resource "aws_s3_bucket_policy" "CTS3BucketPolicy" {
   bucket = aws_s3_bucket.cloudtrail-s3bucket.id
-  policy = templatefile("./templates/CloudTrailBucketPolicy.json", {bucket_name = "${aws_s3_bucket.cloudtrail-s3bucket.id}", iam = "${data.aws_caller_identity.current.account_id}"})
+  policy = templatefile("./templates/CloudTrailBucketPolicy.json", { bucket_name = "${aws_s3_bucket.cloudtrail-s3bucket.id}", iam = "${data.aws_caller_identity.current.account_id}" })
 
   depends_on = [aws_s3_bucket.cloudtrail-s3bucket]
 }
@@ -410,11 +410,11 @@ resource "aws_cloudwatch_log_group" "cloudTrailLogGroup" {
 }
 
 resource "aws_lambda_permission" "cloudwatch_allow" {
-  statement_id = "cloudwatch_allow"
-  action = "lambda:InvokeFunction"
+  statement_id  = "cloudwatch_allow"
+  action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.cwl_stream_lambda.function_name
-  principal = "logs.eu-central-1.amazonaws.com"
-  source_arn = "${aws_cloudwatch_log_group.cloudTrailLogGroup.arn}:*"
+  principal     = "logs.eu-central-1.amazonaws.com"
+  source_arn    = "${aws_cloudwatch_log_group.cloudTrailLogGroup.arn}:*"
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "cloudtrail_logfilter" {
@@ -423,5 +423,5 @@ resource "aws_cloudwatch_log_subscription_filter" "cloudtrail_logfilter" {
   filter_pattern  = ""
   destination_arn = aws_lambda_function.cwl_stream_lambda.arn
 
-  depends_on = [ aws_lambda_permission.cloudwatch_allow ]
+  depends_on = [aws_lambda_permission.cloudwatch_allow]
 }
