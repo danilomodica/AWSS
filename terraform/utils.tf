@@ -264,10 +264,52 @@ resource "aws_lambda_permission" "allow_api2" {
 resource "aws_cloudwatch_log_group" "getS3LambdaLogGroup" {
   name              = "/aws/lambda/${aws_lambda_function.getS3lambda.function_name}"
   retention_in_days = 90
+
+  tags = {
+    Application = "Signed get url lambda"
+    Environment = "Dev"
+  }
 }
 resource "aws_cloudwatch_log_group" "putS3LambdaLogGroup" {
   name              = "/aws/lambda/${aws_lambda_function.putS3lambda.function_name}"
   retention_in_days = 90
+
+  tags = {
+    Application = "Signed put url lambda"
+    Environment = "Dev"
+  }
+}
+
+resource "aws_lambda_permission" "cloudwatch_getS3_allow" {
+  statement_id  = "cloudwatch_getS3_allow"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.cwl_stream_lambda.function_name
+  principal     = "logs.eu-central-1.amazonaws.com"
+  source_arn    = "${aws_cloudwatch_log_group.getS3LambdaLogGroup.arn}:*"
+}
+resource "aws_lambda_permission" "cloudwatch_putS3_allow" {
+  statement_id  = "cloudwatch_putS3_allow"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.cwl_stream_lambda.function_name
+  principal     = "logs.eu-central-1.amazonaws.com"
+  source_arn    = "${aws_cloudwatch_log_group.putS3LambdaLogGroup.arn}:*"
+}
+
+resource "aws_cloudwatch_log_subscription_filter" "getS3_logfilter" {
+  name            = "gets3_logsubscription"
+  log_group_name  = aws_cloudwatch_log_group.getS3LambdaLogGroup.name
+  filter_pattern  = ""
+  destination_arn = aws_lambda_function.cwl_stream_lambda.arn
+
+  depends_on = [aws_lambda_permission.cloudwatch_getS3_allow]
+}
+resource "aws_cloudwatch_log_subscription_filter" "putS3_logfilter" {
+  name            = "puts3_logsubscription"
+  log_group_name  = aws_cloudwatch_log_group.putS3LambdaLogGroup.name
+  filter_pattern  = ""
+  destination_arn = aws_lambda_function.cwl_stream_lambda.arn
+
+  depends_on = [aws_lambda_permission.cloudwatch_putS3_allow]
 }
 
 #Lambda function written in Python that send a mail wether a job was completed successfully or not
