@@ -1,24 +1,26 @@
 import boto3
+from botocore.client import Config
 import json
+
 
 def lambda_handler(event, context):
     # Get the service client.
-    s3 = boto3.client('s3')
+    s3 = boto3.client('s3', config=Config(
+        s3={'addressing_style': 'path'}, signature_version='s3v4'))
 
     # Get Parameters
     bucket = event["pathParameters"]["bucket"]
     filename = event["queryStringParameters"]["filename"]
-    
+
     # Generate the presigned URL for get requests
     url = s3.generate_presigned_url(
-        "put_object", 
+        "put_object",
         Params={
-            "Bucket": bucket, 
+            "Bucket": bucket,
             "Key": filename
-        }, 
-        ExpiresIn=3600
+        },
+        ExpiresIn=600  # 10min
     )
-    # url = s3.generate_presigned_post(Bucket=bucket, Key=filename, Fields=None, Conditions=None, ExpiresIn=3600)
 
     # Logs
     print(event)
