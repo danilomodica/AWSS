@@ -111,7 +111,8 @@ document.getElementById("compute").addEventListener('click', function() {
 																swal.close();
 																Swal.fire({
 																	icon: 'success',
-																	title: 'Your files have been uploaded!'
+																	title: 'Your files have been uploaded!',
+																	text: 'You will soon receive an email with the result'
 																});
 															}
 														})
