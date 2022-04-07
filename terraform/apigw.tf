@@ -460,7 +460,6 @@ resource "aws_api_gateway_deployment" "apigw-deployment" {
     aws_api_gateway_method_response.options2-response
   ]
   rest_api_id = aws_api_gateway_rest_api.apigw.id
-  stage_name  = "dev"
 
   triggers = {
     redeployment = sha1(jsonencode(aws_api_gateway_rest_api.apigw.body))
@@ -471,9 +470,15 @@ resource "aws_api_gateway_deployment" "apigw-deployment" {
   }
 }
 
+resource "aws_api_gateway_stage" "devStage" {
+  deployment_id = aws_api_gateway_deployment.apigw-deployment.id
+  rest_api_id   = aws_api_gateway_rest_api.apigw.id
+  stage_name    = "dev"
+}
+
 resource "aws_api_gateway_method_settings" "stage-settings" {
   rest_api_id = aws_api_gateway_rest_api.apigw.id
-  stage_name  = aws_api_gateway_deployment.apigw-deployment.stage_name
+  stage_name  = aws_api_gateway_stage.devStage.stage_name
   method_path = "*/*"
 
   settings {
@@ -483,22 +488,17 @@ resource "aws_api_gateway_method_settings" "stage-settings" {
   }
 }
 
-resource "aws_cloudwatch_log_group" "apigw-log-group" {
-  name              = "/aws/apigw/${aws_api_gateway_rest_api.apigw.name}"
-  retention_in_days = 90
-}
-
 resource "aws_lambda_permission" "cloudwatch_apigw_allow" {
   statement_id  = "cloudwatch_apigw_allow"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.cwl_stream_lambda.function_name
   principal     = "logs.eu-central-1.amazonaws.com"
-  source_arn    = "${aws_cloudwatch_log_group.apigw-log-group.arn}:*"
+  source_arn    = "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.apigw.id}/${aws_api_gateway_stage.devStage.stage_name}:*"
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "apigw_logfilter" {
-  name            = "cloudtrail_logsubscription"
-  log_group_name  = aws_cloudwatch_log_group.apigw-log-group.name
+  name            = "apigw_logsubscription"
+  log_group_name  = "API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.apigw.id}/${aws_api_gateway_stage.devStage.stage_name}"
   filter_pattern  = ""
   destination_arn = aws_lambda_function.cwl_stream_lambda.arn
 
@@ -508,8 +508,9 @@ resource "aws_cloudwatch_log_subscription_filter" "apigw_logfilter" {
 /* Output API url in a JSON file */
 resource "local_file" "output-json" {
   depends_on = [
-    aws_api_gateway_deployment.apigw-deployment
+    aws_api_gateway_stage.devStage
   ]
-  content  = "{\"url\": \"${aws_api_gateway_deployment.apigw-deployment.invoke_url}\"}"
+  
+  content  = "{\"url\": \"${aws_api_gateway_stage.devStage.invoke_url}\"}"
   filename = "../web-interface/assets/url.json"
 }

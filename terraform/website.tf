@@ -90,13 +90,13 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
     error_code = 404
     response_code = 200
     response_page_path = "/404.html"
-  }*/
+  }
 
   logging_config {
     include_cookies = false
     prefix          = "logs"
     bucket          = aws_s3_bucket.CFLogs.bucket_domain_name
-  }
+  }*/
 
   aliases = [var.website_url]
 
@@ -138,7 +138,7 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
   }
 }
 
-resource "aws_s3_bucket" "CFLogs" {
+/*resource "aws_s3_bucket" "CFLogs" {
   bucket        = "awss-cloudfront-logs"
   force_destroy = true
 
@@ -232,7 +232,7 @@ resource "aws_iam_role_policy_attachment" "ES-attach2" {
 resource "aws_iam_role_policy_attachment" "lambdaLogs3" {
   role       = aws_iam_role.lambdaS32OSRole.name
   policy_arn = aws_iam_policy.lambdaLogging.arn
-}
+}*/
 
 #Adding domain to Route53 redirecting to Cloudfront resources
 resource "aws_route53_zone" "route53_zone" {
@@ -321,7 +321,7 @@ resource "aws_cloudwatch_metric_alarm" "r53_alarm" {
   dimensions = { HealthCheckId = aws_route53_health_check.r53HealthCheck.id }
 }
 
-resource "aws_sns_topic" "topic" { #used to send advice to a predefined email address (to be set)
+resource "aws_sns_topic" "topic" {
   provider = aws.us-east-1
   name     = "R53-healthcheck"
 }
@@ -334,7 +334,7 @@ resource "aws_sns_topic_subscription" "email-target" {
 }
 
 #Route53 query log group and subscription to Opensearch
-resource "aws_cloudwatch_log_group" "aws_route53_cwl" {
+/*resource "aws_cloudwatch_log_group" "aws_route53_cwl" {
   provider = aws.us-east-1
 
   name              = "/aws/route53/${aws_route53_zone.route53_zone.name}"
@@ -392,4 +392,4 @@ resource "aws_cloudwatch_log_subscription_filter" "r53_logfilter" {
   destination_arn = aws_lambda_function.cwl_stream_lambda.arn
 
   depends_on = [aws_lambda_permission.cloudwatch_r53_allow]
-}
+}*/

@@ -99,31 +99,31 @@ resource "aws_security_group" "vpc_sec_group" {
   tags = {
     Name = "allow_web"
   }
-}*/
+}
 
 resource "aws_iam_service_linked_role" "es" {
   aws_service_name = "es.amazonaws.com"
   description      = "Allows Amazon ES to manage AWS resources for a domain on your behalf."
-}
+}*/
 
 resource "aws_elasticsearch_domain" "AWSSElasticsearch" {
   domain_name           = "awss-logs"
-  elasticsearch_version = "OpenSearch_1.1"
+  elasticsearch_version = "OpenSearch_1.2"
 
   #!!!!quando bisogna andare in production bisogna calcolare i parametri corretti per numero di nodi e spazio + eventualmente Warm and cold data storage + tipo di istanze
 
   cluster_config {
-    zone_awareness_enabled = true
+    /*zone_awareness_enabled = true
     zone_awareness_config {
       availability_zone_count = 3
-    }
+    }*/
 
-    dedicated_master_count   = 3
-    dedicated_master_enabled = true
-    dedicated_master_type    = "t3.small.elasticsearch"
+    #dedicated_master_count   = 1 #3
+    #dedicated_master_enabled = true
+    #dedicated_master_type    = "t3.small.elasticsearch"
 
     instance_type  = "t3.small.elasticsearch"
-    instance_count = 6 #1
+    instance_count = 1 #6
   }
 
   ebs_options {
@@ -138,7 +138,7 @@ resource "aws_elasticsearch_domain" "AWSSElasticsearch" {
 
     maintenance_schedule {
       cron_expression_for_recurrence = "cron(0 9 ? * SUN *)"
-      start_at                       = "2022-04-01T01:00:00Z"
+      start_at                       = "2022-07-01T01:00:00Z"
       duration {
         value = 3
         unit  = "HOURS"
@@ -288,6 +288,33 @@ resource "aws_lambda_function" "cwl_stream_lambda" {
     Name        = "Cloudwatch to Opensearch lambda function"
     Environment = "Dev"
   }
+}
+
+#Cloudwatch alarm in case there are errors using logs lambda
+resource "aws_cloudwatch_metric_alarm" "lambdaLog_alarm" {
+  alarm_name                = "Lambda_logs_alarm"
+  comparison_operator       = "GreaterThanThreshold"
+  evaluation_periods        = "3"
+  metric_name               = "Errors"
+  namespace                 = "AWS/Lambda"
+  period                    = "3600"
+  statistic                 = "Average"
+  threshold                 = "3"
+  insufficient_data_actions = []
+  alarm_description         = "Send an alarm if logs are not streamed correctly to OpenSearch"
+  alarm_actions             = [aws_sns_topic.LambdaSNS.arn]
+
+  dimensions = { FunctionName = "${aws_lambda_function.cwl_stream_lambda.function_name}" }
+}
+
+resource "aws_sns_topic" "LambdaSNS" {
+  name = "lambda_SNS"
+}
+
+resource "aws_sns_topic_subscription" "email-target2" {
+  topic_arn = aws_sns_topic.LambdaSNS.arn
+  protocol  = "email"
+  endpoint  = var.email
 }
 
 resource "aws_iam_role" "lambda_opensearch_execution_role" {
