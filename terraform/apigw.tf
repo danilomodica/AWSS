@@ -510,7 +510,7 @@ resource "local_file" "output-json" {
   depends_on = [
     aws_api_gateway_stage.devStage
   ]
-  
+
   content  = "{\"url\": \"${aws_api_gateway_stage.devStage.invoke_url}\"}"
   filename = "../web-interface/assets/url.json"
 }

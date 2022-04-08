@@ -58,13 +58,13 @@ resource "aws_s3_object" "website_files" {
 }
 
 resource "aws_s3_object" "website_json_file" { //upload json file with api invoke url, cannot be combined with above resource
-  depends_on = [
-    aws_api_gateway_deployment.apigw-deployment,
-  local_file.output-json]
+  depends_on = [local_file.output-json]
 
-  bucket = aws_s3_bucket.www_bucket.id
-  key    = replace(local_file.output-json.filename, var.upload_directory, "")
-  source = local_file.output-json.filename
+  bucket       = aws_s3_bucket.www_bucket.id
+  key          = replace(local_file.output-json.filename, var.upload_directory, "") //è corretto ?
+  source       = local_file.output-json.filename
+  //etag         = filemd5("${var.upload_directory}assets/url.json") !! sistemare precedenze e riattivare
+  content_type = "application/json"
 }
 
 # CLOUDFRONT
@@ -90,12 +90,6 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
     error_code = 404
     response_code = 200
     response_page_path = "/404.html"
-  }
-
-  logging_config {
-    include_cookies = false
-    prefix          = "logs"
-    bucket          = aws_s3_bucket.CFLogs.bucket_domain_name
   }*/
 
   aliases = [var.website_url]
@@ -137,102 +131,6 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
     Environment = "Dev"
   }
 }
-
-/*resource "aws_s3_bucket" "CFLogs" {
-  bucket        = "awss-cloudfront-logs"
-  force_destroy = true
-
-  tags = {
-    Name        = "CloudFront Logs"
-    Environment = "Dev"
-  }
-}
-
-resource "aws_s3_bucket_acl" "CFAcl" {
-  bucket = aws_s3_bucket.CFLogs.id
-  acl    = "private"
-}
-
-resource "aws_s3_bucket_public_access_block" "CFaccessBlock" {
-  bucket = aws_s3_bucket.CFLogs.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  restrict_public_buckets = true
-  ignore_public_acls      = true
-}
-
-resource "aws_s3_bucket_notification" "CFbucket-trigger" {
-  bucket = aws_s3_bucket.CFLogs.id
-
-  lambda_function {
-    lambda_function_arn = aws_lambda_function.CFlogsStreamLambda.arn
-    events              = ["s3:ObjectCreated:*"]
-    filter_prefix       = "logs/"
-    filter_suffix       = ".log"
-  }
-
-  depends_on = [aws_lambda_permission.bucketinvoking_allow]
-}
-
-resource "aws_lambda_permission" "bucketinvoking_allow" {
-  statement_id  = "s32lambda_allow"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.CFlogsStreamLambda.function_name
-  principal     = "s3.amazonaws.com"
-  source_arn    = aws_s3_bucket.CFLogs.arn
-}
-
-resource "aws_lambda_function" "CFlogsStreamLambda" {
-  description   = "Lambda function to stream Cloudfront logs to OpenSearch"
-  filename      = "lambdaSource/cflogslambda.zip"
-  function_name = "s3-log-indexing"
-  handler       = "sample.handler"
-  role          = aws_iam_role.lambdaS32OSRole.arn
-
-  source_code_hash = filebase64sha256("lambdaSource/cflogslambda.zip")
-
-  runtime       = "python3.9"
-  architectures = ["arm64"]
-
-  environment {
-    variables = {
-      host   = aws_elasticsearch_domain.AWSSElasticsearch.endpoint
-      region = var.region
-    }
-  }
-
-  tags = {
-    Name        = "CF S3 to OpenSearch function"
-    Environment = "Dev"
-  }
-}
-
-output "lambdaS32OS_execution_role_arn" {
-  value = aws_iam_role.lambdaS32OSRole.arn
-}
-
-resource "aws_iam_role" "lambdaS32OSRole" {
-  name        = "lambdaS32OSRole"
-  description = "Lambda role to give s3 read-only and opensearch permissions to lambdas"
-
-  assume_role_policy = templatefile("./templates/lambdaRolePolicy.json", {})
-}
-
-resource "aws_iam_role_policy_attachment" "RO-attach1" {
-  role       = aws_iam_role.lambdaS32OSRole.name
-  policy_arn = aws_iam_policy.get-s3-lambda-policy.arn
-}
-
-resource "aws_iam_role_policy_attachment" "ES-attach2" {
-  role       = aws_iam_role.lambdaS32OSRole.name
-  policy_arn = aws_iam_policy.ESHTTPPolicy.arn
-}
-
-resource "aws_iam_role_policy_attachment" "lambdaLogs3" {
-  role       = aws_iam_role.lambdaS32OSRole.name
-  policy_arn = aws_iam_policy.lambdaLogging.arn
-}*/
 
 #Adding domain to Route53 redirecting to Cloudfront resources
 resource "aws_route53_zone" "route53_zone" {
@@ -332,64 +230,3 @@ resource "aws_sns_topic_subscription" "email-target" {
   protocol  = "email"
   endpoint  = var.email
 }
-
-#Route53 query log group and subscription to Opensearch
-/*resource "aws_cloudwatch_log_group" "aws_route53_cwl" {
-  provider = aws.us-east-1
-
-  name              = "/aws/route53/${aws_route53_zone.route53_zone.name}"
-  retention_in_days = 90
-
-  tags = {
-    Application = "Route53"
-    Environment = "Dev"
-  }
-}
-
-resource "aws_route53_query_log" "r53_querylog" {
-  depends_on = [aws_cloudwatch_log_resource_policy.route53-query-logging-policy]
-
-  cloudwatch_log_group_arn = aws_cloudwatch_log_group.aws_route53_cwl.arn
-  zone_id                  = aws_route53_zone.route53_zone.zone_id
-}
-
-data "aws_iam_policy_document" "route53-query-logging-policy" {
-  statement {
-    actions = [
-      "logs:CreateLogStream",
-      "logs:PutLogEvents",
-    ]
-
-    resources = ["arn:aws:logs:*:*:log-group:/aws/route53/*"]
-
-    principals {
-      identifiers = ["route53.amazonaws.com"]
-      type        = "Service"
-    }
-  }
-}
-
-resource "aws_cloudwatch_log_resource_policy" "route53-query-logging-policy" {
-  provider = aws.us-east-1
-
-  policy_document = data.aws_iam_policy_document.route53-query-logging-policy.json
-  policy_name     = "route53-query-logging-policy"
-}
-
-resource "aws_lambda_permission" "cloudwatch_r53_allow" {
-  statement_id  = "cloudwatch_allow_r53"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.cwl_stream_lambda.function_name
-  principal     = "logs.us-east-1.amazonaws.com"
-  source_arn    = "${aws_cloudwatch_log_group.aws_route53_cwl.arn}:*"
-}
-
-resource "aws_cloudwatch_log_subscription_filter" "r53_logfilter" {
-  provider        = aws.us-east-1
-  name            = "r53_logsubscription"
-  log_group_name  = aws_cloudwatch_log_group.aws_route53_cwl.name
-  filter_pattern  = ""
-  destination_arn = aws_lambda_function.cwl_stream_lambda.arn
-
-  depends_on = [aws_lambda_permission.cloudwatch_r53_allow]
-}*/

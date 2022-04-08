@@ -1,111 +1,3 @@
-#Network config
-/*#1. Create VPC
-resource "aws_vpc" "log-vpc" {
-  cidr_block       = "172.31.0.0/16"
-
-  tags = {
-    Name = "OpenSearch Cluster VPC"
-    Environment = "Dev"
-  }
-}
-
-#2. Create Internet Gateway
-resource "aws_internet_gateway" "log-gw" {
-  vpc_id = aws_vpc.log-vpc.id
-
-  tags = {
-    Name = "OpenSearch Cluster Internet GW"
-    Environment = "Dev"
-  }
-}
-
-#3. Route Table
-resource "aws_route_table" "log-route-table" {
-  vpc_id = aws_vpc.log-vpc.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.log-gw.id
-  }
-
-  route {
-    ipv6_cidr_block        = "::/0"
-    gateway_id = aws_internet_gateway.log-gw.id
-  }
-
-  tags = {
-    Name = "OpenSearch Cluster Route Table"
-    Environment = "Dev"
-  }
-}
-
-#4. Create a subnet
-resource "aws_subnet" "subnet-log" {
-  for_each = {"eu-central-1a":"172.31.32.0/20", "eu-central-1b":"172.31.16.0/20", "eu-central-1c":"172.31.0.0/20"} #controllare blocchi cidr
-  vpc_id     = aws_vpc.log-vpc.id
-  cidr_block = each.value
-  availability_zone = each.key
-
-  tags = {
-    Name = "OpenSearch Cluster Subnet-${each.key}"
-    Environment = "Dev"
-  }
-}
-
-#5. Associate subnet with Route Table
-resource "aws_route_table_association" "rt_subnet_assoc" {
-  for_each = aws_subnet.subnet-log
-  subnet_id = each.value.id
-  route_table_id = aws_route_table.log-route-table.id
-}
-
-#6. Create Security Group to allow port 22,80,443
-resource "aws_security_group" "vpc_sec_group" {
-  name        = "allow_web_traffic"
-  description = "Allow Web traffic inbound traffic"
-  vpc_id      = aws_vpc.log-vpc.id
-
-  ingress {
-    description      = "HTTPS"
-    from_port        = 443
-    to_port          = 443
-    protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description      = "HTTP"
-    from_port        = 80
-    to_port          = 80
-    protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description      = "SSH"
-    from_port        = 22
-    to_port          = 22
-    protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "allow_web"
-  }
-}
-
-resource "aws_iam_service_linked_role" "es" {
-  aws_service_name = "es.amazonaws.com"
-  description      = "Allows Amazon ES to manage AWS resources for a domain on your behalf."
-}*/
-
 resource "aws_elasticsearch_domain" "AWSSElasticsearch" {
   domain_name           = "awss-logs"
   elasticsearch_version = "OpenSearch_1.2"
@@ -145,11 +37,6 @@ resource "aws_elasticsearch_domain" "AWSSElasticsearch" {
       }
     }
   }
-
-  /*vpc_options {
-    security_group_ids = [aws_security_group.vpc_sec_group.id]
-    subnet_ids = [for subnet in aws_subnet.subnet-log: subnet.id]
-  }*/
 
   node_to_node_encryption {
     enabled = true
@@ -195,8 +82,6 @@ resource "aws_elasticsearch_domain" "AWSSElasticsearch" {
   }
 
   access_policies = templatefile("./templates/openSearchPolicy.json", {})
-
-  //depends_on = [aws_vpc.log-vpc]
 
   tags = {
     Name        = "Elasticsearch AWSS Domain"

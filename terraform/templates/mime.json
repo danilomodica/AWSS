@@ -2,6 +2,5 @@
 	".css"			: "text/css",
 	".html"			: "text/html",
 	".js"			: "application/javascript",
-	".png"			: "image/png",
-	".json"			: "application/json"
+	".png"			: "image/png"
 }
