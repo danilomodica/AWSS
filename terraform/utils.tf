@@ -35,6 +35,22 @@ resource "aws_s3_bucket_cors_configuration" "corsInputs" {
   }
 }
 
+resource "aws_s3_bucket_lifecycle_configuration" "inputBucketLifecycle" {
+  bucket = aws_s3_bucket.AWSSInputFiles.bucket
+
+  rule {
+    id = "expiration"
+
+    expiration {
+      days = 7
+    }
+
+    filter {}
+
+    status = "Enabled"
+  }
+}
+
 /* S3 Bucket that will contain resulting matched substrings */
 resource "aws_s3_bucket" "AWSSResultFiles" {
   bucket        = "awss-result-files"
@@ -69,6 +85,32 @@ resource "aws_s3_bucket_cors_configuration" "corsResults" {
     allowed_origins = ["*"]
     expose_headers  = [""]
     max_age_seconds = 3000
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "resultsBucketLifecycle" {
+  bucket = aws_s3_bucket.AWSSResultFiles.bucket
+
+  rule {
+    id = "north-pole"
+
+    expiration {
+      days = 365
+    }
+
+    filter {}
+
+    status = "Enabled"
+
+    transition {
+      days          = 30
+      storage_class = "STANDARD_IA"
+    }
+
+    transition {
+      days          = 60
+      storage_class = "GLACIER"
+    }
   }
 }
 

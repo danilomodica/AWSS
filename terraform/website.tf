@@ -58,12 +58,10 @@ resource "aws_s3_object" "website_files" {
 }
 
 resource "aws_s3_object" "website_json_file" { //upload json file with api invoke url, cannot be combined with above resource
-  depends_on = [local_file.output-json]
-
   bucket       = aws_s3_bucket.www_bucket.id
-  key          = replace(local_file.output-json.filename, var.upload_directory, "") //è corretto ?
+  key          = replace(local_file.output-json.filename, var.upload_directory, "")
   source       = local_file.output-json.filename
-  //etag         = filemd5("${var.upload_directory}assets/url.json") !! sistemare precedenze e riattivare
+  etag         = md5(local_file.output-json.content)
   content_type = "application/json"
 }
 

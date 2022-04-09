@@ -309,6 +309,22 @@ resource "aws_s3_bucket_policy" "CTS3BucketPolicy" {
   depends_on = [aws_s3_bucket.cloudtrail-s3bucket]
 }
 
+resource "aws_s3_bucket_lifecycle_configuration" "cloudTrailBucketLifecycle" {
+  bucket = aws_s3_bucket.cloudtrail-s3bucket.id
+
+  rule {
+    id = "expiration"
+
+    expiration {
+      days = 90
+    }
+
+    filter {}
+
+    status = "Enabled"
+  }
+}
+
 #Creating the cloudwatch log group that and the subscription to Opensearch
 resource "aws_cloudwatch_log_group" "cloudTrailLogGroup" {
   name = "cloudTrailLogGroup"
