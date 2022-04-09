@@ -218,6 +218,39 @@ resource "aws_sqs_queue" "sendMailQueue_deadLetter" {
   }
 }
 
+#Cloudwatch alarms in case too much messages are sent to dlq queue
+resource "aws_cloudwatch_metric_alarm" "sendMailDLQ_alarm" {
+  alarm_name                = "sendMailDQL_alarm"
+  comparison_operator       = "GreaterThanThreshold"
+  evaluation_periods        = "5"
+  metric_name               = "NumberOfMessagesReceived"
+  namespace                 = "AWS/SQS"
+  period                    = "900"
+  statistic                 = "Average"
+  threshold                 = "3"
+  insufficient_data_actions = []
+  alarm_description         = "Send an alarm if emails are not sent correctly by lambda sendMail"
+  alarm_actions             = [aws_sns_topic.notify.arn]
+
+  dimensions = { QueueName = "${aws_sqs_queue.sendMailQueue_deadLetter.name}" }
+}
+
+resource "aws_cloudwatch_metric_alarm" "FifoDLQ_alarm" {
+  alarm_name                = "fifoDQL_alarm"
+  comparison_operator       = "GreaterThanThreshold"
+  evaluation_periods        = "5"
+  metric_name               = "NumberOfMessagesReceived"
+  namespace                 = "AWS/SQS"
+  period                    = "900"
+  statistic                 = "Average"
+  threshold                 = "3"
+  insufficient_data_actions = []
+  alarm_description         = "Send an alarm if too much messages are sent to dlq"
+  alarm_actions             = [aws_sns_topic.notify.arn]
+
+  dimensions = { QueueName = "${aws_sqs_queue.inputFIFOQueue_Deadletter.name}" }
+}
+
 resource "aws_sqs_queue_policy" "sendMailQueuePolicy" {
   queue_url = aws_sqs_queue.sendMailQueue.id
 
@@ -228,6 +261,17 @@ resource "aws_sqs_queue_policy" "sendMailQueuePolicy" {
   })
 
   depends_on = [data.aws_caller_identity.current]
+}
+
+/* SNS topic to notify in case of critical problems */
+resource "aws_sns_topic" "notify" {
+  name = "SNS_notify"
+}
+
+resource "aws_sns_topic_subscription" "email-target2" {
+  topic_arn = aws_sns_topic.notify.arn
+  protocol  = "email"
+  endpoint  = var.email
 }
 
 /* Lambda to get signed URL from S3 bucket to get objects */
@@ -373,6 +417,10 @@ resource "aws_lambda_function" "sendMail" {
 
   runtime       = "python3.9"
   architectures = ["arm64"]
+
+  dead_letter_config {
+    target_arn = aws_sqs_queue.sendMailQueue_deadLetter.arn
+  }
 
   depends_on = [data.archive_file.sendMailzip]
 

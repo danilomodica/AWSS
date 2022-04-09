@@ -187,19 +187,9 @@ resource "aws_cloudwatch_metric_alarm" "lambdaLog_alarm" {
   threshold                 = "3"
   insufficient_data_actions = []
   alarm_description         = "Send an alarm if logs are not streamed correctly to OpenSearch"
-  alarm_actions             = [aws_sns_topic.LambdaSNS.arn]
+  alarm_actions             = [aws_sns_topic.notify.arn]
 
   dimensions = { FunctionName = "${aws_lambda_function.cwl_stream_lambda.function_name}" }
-}
-
-resource "aws_sns_topic" "LambdaSNS" {
-  name = "lambda_SNS"
-}
-
-resource "aws_sns_topic_subscription" "email-target2" {
-  topic_arn = aws_sns_topic.LambdaSNS.arn
-  protocol  = "email"
-  endpoint  = var.email
 }
 
 resource "aws_iam_role" "lambda_opensearch_execution_role" {
