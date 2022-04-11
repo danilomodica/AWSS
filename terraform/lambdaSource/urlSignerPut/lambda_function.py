@@ -1,4 +1,6 @@
+import logging
 import boto3
+from botocore.exceptions import ClientError
 from botocore.client import Config
 import json
 
@@ -13,20 +15,18 @@ def lambda_handler(event, context):
     filename = event["queryStringParameters"]["filename"]
 
     # Generate the presigned URL for get requests
-    url = s3.generate_presigned_url(
-        "put_object",
-        Params={
-            "Bucket": bucket,
-            "Key": filename
-        },
-        ExpiresIn=600  # 10min
-    )
-
-    # Logs
-    print(event)
-    print(bucket)
-    print(filename)
-    print(url)
+    try:
+        url = s3.generate_presigned_url(
+            "put_object",
+            Params={
+                "Bucket": bucket,
+                "Key": filename
+            },
+            ExpiresIn=600  # 10min
+        )
+    except ClientError as e:
+        logging.error(e)
+        return None
 
     # Return the presigned URL
     return {
