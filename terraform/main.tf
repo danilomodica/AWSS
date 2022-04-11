@@ -36,7 +36,7 @@ data "aws_caller_identity" "current" {} # to take iam ID
 variable "masterName" { default = "awssCloud" }
 variable "masterPass" { default = "awssCC22*" }
 
-output "elasticsearch_credentials" {
+output "OpenSearch_credentials" {
   value = [var.masterName, var.masterPass]
 }
 
