@@ -277,7 +277,7 @@ resource "aws_sns_topic_subscription" "email-target2" {
 /* Lambda to get signed URL from S3 bucket to get objects */
 data "archive_file" "urlSignerGet" {
   type             = "zip"
-  source_file      = "${path.module}/lambdaSource/urlSignerGet/lambda_function.py"
+  source_file      = "${path.module}/src/urlSignerGet/lambda_function.py"
   output_file_mode = "0666"
   output_path      = "./zip/urlSignerGet.zip"
 }
@@ -305,7 +305,7 @@ resource "aws_lambda_function" "getS3lambda" {
 /* Lambda to get signed URL from S3 bucket to upload objects */
 data "archive_file" "urlSignerPut" {
   type             = "zip"
-  source_file      = "${path.module}/lambdaSource/urlSignerPut/lambda_function.py"
+  source_file      = "${path.module}/src/urlSignerPut/lambda_function.py"
   output_file_mode = "0666"
   output_path      = "./zip/urlSignerPut.zip"
 }
@@ -401,7 +401,7 @@ resource "aws_cloudwatch_log_subscription_filter" "putS3_logfilter" {
 #Lambda function written in Python that send a mail wether a job was completed successfully or not
 data "archive_file" "sendMailzip" {
   type             = "zip"
-  source_file      = "${path.module}/lambdaSource/sendMail/lambda_function.py"
+  source_file      = "${path.module}/src/sendMail.py"
   output_file_mode = "0666"
   output_path      = "./zip/sendMail.zip"
 }
@@ -411,7 +411,7 @@ resource "aws_lambda_function" "sendMail" {
   filename      = "zip/sendMail.zip"
   function_name = "sendMail"
   role          = aws_iam_role.lambdaSQSRole.arn
-  handler       = "lambda_function.lambda_handler"
+  handler       = "sendMail.lambda_handler"
 
   source_code_hash = data.archive_file.sendMailzip.output_base64sha256
 

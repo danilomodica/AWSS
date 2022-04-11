@@ -1,5 +1,5 @@
 import pytest
-from lambda_function import lambda_handler
+from terraform.src.sendMail import lambda_handler
 
 def test_allCharId():
     r  = lambda_handler({"Records":[{"body":"4è3$*r5@ awss.unipv@gmail.com 1"}]},"")

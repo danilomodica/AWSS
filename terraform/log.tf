@@ -141,13 +141,13 @@ resource "aws_cloudwatch_log_subscription_filter" "openSearch_logfilter" {
 }
 
 output "elasticsearch_KibanaURL" {
-  value = aws_elasticsearch_domain.AWSSElasticsearch.kibana_endpoint
+  value = "${aws_elasticsearch_domain.AWSSElasticsearch.endpoint}/_dashboards"
 }
 
 #Lambda that streams log data to opensearch (it is the standard one but uses env variable to point the correct kibana endpoint)
 data "archive_file" "cwl2lambdaZip" {
   type             = "zip"
-  source_file      = "${path.module}/lambdaSource/cwl2lambda/index.js"
+  source_file      = "${path.module}/src/cwl2lambda.js"
   output_file_mode = "0666"
   output_path      = "./zip/cwl2lambda.zip"
 }
@@ -157,7 +157,7 @@ resource "aws_lambda_function" "cwl_stream_lambda" {
   filename         = "zip/cwl2lambda.zip"
   function_name    = "LogsToElasticsearch"
   role             = aws_iam_role.lambda_opensearch_execution_role.arn
-  handler          = "index.handler"
+  handler          = "cwl2lambda.handler"
   source_code_hash = data.archive_file.cwl2lambdaZip.output_base64sha256
   runtime          = "nodejs14.x"
 
@@ -215,10 +215,6 @@ resource "aws_iam_role_policy_attachment" "OSLogs1" {
 resource "aws_iam_role_policy_attachment" "OSLogs2" {
   role       = aws_iam_role.lambda_opensearch_execution_role.name
   policy_arn = aws_iam_policy.ESHTTPPolicy.arn
-}
-
-output "lambda_execution_role_arn" {
-  value = aws_iam_role.lambda_opensearch_execution_role.arn
 }
 
 #Cloudtrail to monitor API usage and user activity

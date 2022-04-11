@@ -2,7 +2,6 @@ import json
 import smtplib
 
 def lambda_handler(event,context):
-    print(event)
     for record in event['Records']:
         msg = str(record["body"]).split()
         
