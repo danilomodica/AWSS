@@ -61,30 +61,34 @@ resource "aws_elasticsearch_domain" "AWSSElasticsearch" {
   }
 
   log_publishing_options {
-    enabled                  = true
+    enabled                  = false #true
     log_type                 = "INDEX_SLOW_LOGS"
     cloudwatch_log_group_arn = aws_cloudwatch_log_group.openSearchLogGroup.arn
   }
   log_publishing_options {
-    enabled                  = true
+    enabled                  = false #true
     log_type                 = "SEARCH_SLOW_LOGS"
     cloudwatch_log_group_arn = aws_cloudwatch_log_group.openSearchLogGroup.arn
   }
   log_publishing_options {
-    enabled                  = true
+    enabled                  = false #true
     log_type                 = "ES_APPLICATION_LOGS"
     cloudwatch_log_group_arn = aws_cloudwatch_log_group.openSearchLogGroup.arn
   }
   log_publishing_options {
-    enabled                  = true
+    enabled                  = false #true
     log_type                 = "AUDIT_LOGS"
     cloudwatch_log_group_arn = aws_cloudwatch_log_group.openSearchLogGroup.arn
   }
 
   access_policies = templatefile("./templates/openSearchPolicy.json", {})
 
+  provisioner "local-exec" {
+    command = "curl -X PUT -u '${var.masterName}:${var.masterPass}' -H 'Content-Type:application/json' '${aws_elasticsearch_domain.AWSSElasticsearch.endpoint}/_plugins/_security/api/rolesmapping/all_access' -d '{\"backend_roles\" : [\"${aws_iam_role.lambda_opensearch_execution_role.arn}\"],\"hosts\" : [],\"users\" : [\"${var.masterName}\",\"${data.aws_caller_identity.current.arn}\"]}'"
+  }
+
   tags = {
-    Name        = "Elasticsearch AWSS Domain"
+    Name        = "OpenSearch AWSS Domain"
     Environment = "Dev"
   }
 }
@@ -140,7 +144,7 @@ resource "aws_cloudwatch_log_subscription_filter" "openSearch_logfilter" {
   depends_on = [aws_lambda_permission.opensearch_allow]
 }
 
-output "elasticsearch_KibanaURL" {
+output "OpenSearch_Dashboard" {
   value = "${aws_elasticsearch_domain.AWSSElasticsearch.endpoint}/_dashboards"
 }
 

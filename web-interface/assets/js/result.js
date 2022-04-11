@@ -48,7 +48,7 @@ document.getElementById("get").addEventListener('click', function() {
 							swal.close();
 							Swal.fire({
 								icon: 'error',
-								title: response.status + ' ' + response.statusText,
+								title: 'Error',
 								text: 'Please use the ID you received in your mailbox'
 							});
 						}
