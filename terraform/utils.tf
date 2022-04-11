@@ -226,7 +226,7 @@ resource "aws_cloudwatch_metric_alarm" "sendMailDLQ_alarm" {
   metric_name               = "NumberOfMessagesReceived"
   namespace                 = "AWS/SQS"
   period                    = "900"
-  statistic                 = "Average"
+  statistic                 = "SampleCount"
   threshold                 = "3"
   insufficient_data_actions = []
   alarm_description         = "Send an alarm if emails are not sent correctly by lambda sendMail"
@@ -242,7 +242,7 @@ resource "aws_cloudwatch_metric_alarm" "FifoDLQ_alarm" {
   metric_name               = "NumberOfMessagesReceived"
   namespace                 = "AWS/SQS"
   period                    = "900"
-  statistic                 = "Average"
+  statistic                 = "SampleCount"
   threshold                 = "3"
   insufficient_data_actions = []
   alarm_description         = "Send an alarm if too much messages are sent to dlq"

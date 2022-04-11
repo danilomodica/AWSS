@@ -60,27 +60,6 @@ resource "aws_elasticsearch_domain" "AWSSElasticsearch" {
     }
   }
 
-  log_publishing_options {
-    enabled                  = false #true
-    log_type                 = "INDEX_SLOW_LOGS"
-    cloudwatch_log_group_arn = aws_cloudwatch_log_group.openSearchLogGroup.arn
-  }
-  log_publishing_options {
-    enabled                  = false #true
-    log_type                 = "SEARCH_SLOW_LOGS"
-    cloudwatch_log_group_arn = aws_cloudwatch_log_group.openSearchLogGroup.arn
-  }
-  log_publishing_options {
-    enabled                  = false #true
-    log_type                 = "ES_APPLICATION_LOGS"
-    cloudwatch_log_group_arn = aws_cloudwatch_log_group.openSearchLogGroup.arn
-  }
-  log_publishing_options {
-    enabled                  = false #true
-    log_type                 = "AUDIT_LOGS"
-    cloudwatch_log_group_arn = aws_cloudwatch_log_group.openSearchLogGroup.arn
-  }
-
   access_policies = templatefile("./templates/openSearchPolicy.json", {})
 
   provisioner "local-exec" {
@@ -91,57 +70,6 @@ resource "aws_elasticsearch_domain" "AWSSElasticsearch" {
     Name        = "OpenSearch AWSS Domain"
     Environment = "Dev"
   }
-}
-
-resource "aws_cloudwatch_log_group" "openSearchLogGroup" {
-  name = "openSearchLogGroup"
-
-  retention_in_days = 90
-
-  tags = {
-    Application = "OpenSearch"
-    Environment = "Dev"
-  }
-}
-
-resource "aws_cloudwatch_log_resource_policy" "OSLogPolicy" {
-  policy_name     = "OSLogPolicy"
-  policy_document = <<CONFIG
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "es.amazonaws.com"
-      },
-      "Action": [
-        "logs:PutLogEvents",
-        "logs:PutLogEventsBatch",
-        "logs:CreateLogStream"
-      ],
-      "Resource": "arn:aws:logs:*"
-    }
-  ]
-}
-CONFIG
-}
-
-resource "aws_lambda_permission" "opensearch_allow" {
-  statement_id  = "opensearch_allow"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.cwl_stream_lambda.function_name
-  principal     = "logs.eu-central-1.amazonaws.com"
-  source_arn    = "${aws_cloudwatch_log_group.openSearchLogGroup.arn}:*"
-}
-
-resource "aws_cloudwatch_log_subscription_filter" "openSearch_logfilter" {
-  name            = "openSearch_logsubscription"
-  log_group_name  = aws_cloudwatch_log_group.openSearchLogGroup.name
-  filter_pattern  = ""
-  destination_arn = aws_lambda_function.cwl_stream_lambda.arn
-
-  depends_on = [aws_lambda_permission.opensearch_allow]
 }
 
 output "OpenSearch_Dashboard" {
@@ -179,6 +107,16 @@ resource "aws_lambda_function" "cwl_stream_lambda" {
   }
 }
 
+resource "aws_cloudwatch_log_group" "LogsToESLogGroup" {
+  name              = "/aws/lambda/${aws_lambda_function.cwl_stream_lambda.function_name}"
+  retention_in_days = 7
+
+  tags = {
+    Application = "Logs to ElasticSearch lambda"
+    Environment = "Dev"
+  }
+}
+
 #Cloudwatch alarm in case there are errors using logs lambda
 resource "aws_cloudwatch_metric_alarm" "lambdaLog_alarm" {
   alarm_name                = "Lambda_logs_alarm"
@@ -186,9 +124,9 @@ resource "aws_cloudwatch_metric_alarm" "lambdaLog_alarm" {
   evaluation_periods        = "3"
   metric_name               = "Errors"
   namespace                 = "AWS/Lambda"
-  period                    = "3600"
-  statistic                 = "Average"
-  threshold                 = "3"
+  period                    = "300"
+  statistic                 = "SampleCount"
+  threshold                 = "5"
   insufficient_data_actions = []
   alarm_description         = "Send an alarm if logs are not streamed correctly to OpenSearch"
   alarm_actions             = [aws_sns_topic.notify.arn]
@@ -219,127 +157,4 @@ resource "aws_iam_role_policy_attachment" "OSLogs1" {
 resource "aws_iam_role_policy_attachment" "OSLogs2" {
   role       = aws_iam_role.lambda_opensearch_execution_role.name
   policy_arn = aws_iam_policy.ESHTTPPolicy.arn
-}
-
-#Cloudtrail to monitor API usage and user activity
-resource "aws_cloudtrail" "cloudtrail" {
-  name                          = "cloudtrail-logs"
-  s3_bucket_name                = aws_s3_bucket.cloudtrail-s3bucket.id
-  include_global_service_events = true
-
-  event_selector {
-    read_write_type           = "All"
-    include_management_events = true
-
-    data_resource {
-      type   = "AWS::Lambda::Function"
-      values = ["arn:aws:lambda"]
-    }
-  }
-
-  event_selector {
-    read_write_type           = "All"
-    include_management_events = true
-
-    data_resource {
-      type   = "AWS::S3::Object"
-      values = ["arn:aws:s3:::"]
-    }
-  }
-
-  tags = {
-    Name        = "CloudTrail Logging"
-    Environment = "Dev"
-  }
-
-  cloud_watch_logs_group_arn = "${aws_cloudwatch_log_group.cloudTrailLogGroup.arn}:*" # CloudTrail requires the Log Stream wildcard
-  cloud_watch_logs_role_arn  = aws_iam_role.cloudTrailIAM.arn
-}
-
-resource "aws_iam_role" "cloudTrailIAM" {
-  name        = "cloudTrailIAM"
-  description = "IAM Role for CloudTrail"
-
-  assume_role_policy = templatefile("./templates/CloudTrailRolePolicy.json", {})
-
-  inline_policy {
-    name   = "CT-Policy"
-    policy = templatefile("./templates/CloudTrailLogPolicy.json", { log-group-arn = aws_cloudwatch_log_group.cloudTrailLogGroup.arn })
-  }
-}
-
-resource "aws_s3_bucket" "cloudtrail-s3bucket" { #cloudtrail bucket for logs
-  bucket        = "cloudtrail-s3bucket-awss"
-  force_destroy = true
-
-  tags = {
-    Name        = "Cloudtrail bucket logs"
-    Environment = "Dev"
-  }
-}
-
-resource "aws_s3_bucket_acl" "aclCT" {
-  bucket = aws_s3_bucket.cloudtrail-s3bucket.id
-  acl    = "private"
-}
-
-resource "aws_s3_bucket_public_access_block" "accessBlockCT" {
-  bucket = aws_s3_bucket.cloudtrail-s3bucket.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  restrict_public_buckets = true
-  ignore_public_acls      = true
-}
-
-resource "aws_s3_bucket_policy" "CTS3BucketPolicy" {
-  bucket = aws_s3_bucket.cloudtrail-s3bucket.id
-  policy = templatefile("./templates/CloudTrailBucketPolicy.json", { bucket_name = "${aws_s3_bucket.cloudtrail-s3bucket.id}", iam = "${data.aws_caller_identity.current.account_id}" })
-
-  depends_on = [aws_s3_bucket.cloudtrail-s3bucket]
-}
-
-resource "aws_s3_bucket_lifecycle_configuration" "cloudTrailBucketLifecycle" {
-  bucket = aws_s3_bucket.cloudtrail-s3bucket.id
-
-  rule {
-    id = "expiration"
-
-    expiration {
-      days = 90
-    }
-
-    filter {}
-
-    status = "Enabled"
-  }
-}
-
-#Creating the cloudwatch log group that and the subscription to Opensearch
-resource "aws_cloudwatch_log_group" "cloudTrailLogGroup" {
-  name = "cloudTrailLogGroup"
-
-  retention_in_days = 90
-
-  tags = {
-    Application = "Cloudtrail"
-    Environment = "Dev"
-  }
-}
-
-resource "aws_lambda_permission" "cloudwatch_allow" {
-  statement_id  = "cloudwatch_allow"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.cwl_stream_lambda.function_name
-  principal     = "logs.eu-central-1.amazonaws.com"
-  source_arn    = "${aws_cloudwatch_log_group.cloudTrailLogGroup.arn}:*"
-}
-
-resource "aws_cloudwatch_log_subscription_filter" "cloudtrail_logfilter" {
-  name            = "cloudtrail_logsubscription"
-  log_group_name  = aws_cloudwatch_log_group.cloudTrailLogGroup.name
-  filter_pattern  = ""
-  destination_arn = aws_lambda_function.cwl_stream_lambda.arn
-
-  depends_on = [aws_lambda_permission.cloudwatch_allow]
 }
