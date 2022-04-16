@@ -1,5 +1,3 @@
-new PureCounter();
-
 (function() {
   "use strict";
 
