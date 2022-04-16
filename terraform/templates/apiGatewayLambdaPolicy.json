@@ -5,8 +5,7 @@
             "Effect": "Allow",
             "Action": "lambda:InvokeFunction",
             "Resource": [
-                "${arn_get}",
-                "${arn_put}"
+                "${arn_lambda}"
             ]
         }
     ]

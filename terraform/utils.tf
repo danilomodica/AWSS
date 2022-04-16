@@ -274,128 +274,69 @@ resource "aws_sns_topic_subscription" "email-target2" {
   endpoint  = var.email
 }
 
-/* Lambda to get signed URL from S3 bucket to get objects */
-data "archive_file" "urlSignerGet" {
+/* Lambda to get signed URL from S3 bucket to get/put objects */
+data "archive_file" "urlSigner" {
   type             = "zip"
-  source_file      = "${path.module}/src/urlSignerGet/lambda_function.py"
+  source_file      = "${path.module}/src/urlSigner.py"
   output_file_mode = "0666"
-  output_path      = "./zip/urlSignerGet.zip"
+  output_path      = "./zip/urlSigner.zip"
 }
 
-resource "aws_lambda_function" "getS3lambda" {
-  description   = "Function that generates signed url to get objects from S3 bucket"
-  filename      = "zip/urlSignerGet.zip"
-  function_name = "urlSignerGet"
+resource "aws_lambda_function" "reqS3lambda" {
+  description   = "Function that generates signed url to get/put objects into S3 bucket"
+  filename      = "zip/urlSigner.zip"
+  function_name = "urlSigner"
   role          = aws_iam_role.s3-lambda-role.arn
-  handler       = "lambda_function.lambda_handler"
+  handler       = "urlSigner.lambda_handler"
 
-  source_code_hash = data.archive_file.urlSignerGet.output_base64sha256
+  source_code_hash = data.archive_file.urlSigner.output_base64sha256
 
   runtime       = "python3.9"
   architectures = ["x86_64"]
 
-  depends_on = [data.archive_file.urlSignerGet]
+  depends_on = [data.archive_file.urlSigner]
 
   tags = {
-    Name        = "Url Signer Get function "
-    Environment = "Dev"
-  }
-}
-
-/* Lambda to get signed URL from S3 bucket to upload objects */
-data "archive_file" "urlSignerPut" {
-  type             = "zip"
-  source_file      = "${path.module}/src/urlSignerPut/lambda_function.py"
-  output_file_mode = "0666"
-  output_path      = "./zip/urlSignerPut.zip"
-}
-
-resource "aws_lambda_function" "putS3lambda" {
-  description   = "Function that generates signed url to put objects into S3 bucket"
-  filename      = "zip/urlSignerPut.zip"
-  function_name = "urlSignerPut"
-  role          = aws_iam_role.s3-lambda-role.arn
-  handler       = "lambda_function.lambda_handler"
-
-  source_code_hash = data.archive_file.urlSignerPut.output_base64sha256
-
-  runtime       = "python3.9"
-  architectures = ["x86_64"]
-
-  depends_on = [data.archive_file.urlSignerPut]
-
-  tags = {
-    Name        = "Url Signer Put function "
+    Name        = "Url Signer function "
     Environment = "Dev"
   }
 }
 
 /* Lambda Permissions */
-resource "aws_lambda_permission" "allow_api1" {
+resource "aws_lambda_permission" "allow_api" {
   statement_id  = "AllowAPIgatewayInvokation"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.getS3lambda.function_name
+  function_name = aws_lambda_function.reqS3lambda.function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "arn:aws:execute-api:${var.region}:${data.aws_caller_identity.current.account_id}:${aws_api_gateway_rest_api.apigw.id}/*/GET/*"
-}
-resource "aws_lambda_permission" "allow_api2" {
-  statement_id  = "AllowAPIgatewayInvokation"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.putS3lambda.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "arn:aws:execute-api:${var.region}:${data.aws_caller_identity.current.account_id}:${aws_api_gateway_rest_api.apigw.id}/*/POST/*"
+  source_arn    = "arn:aws:execute-api:${var.region}:${data.aws_caller_identity.current.account_id}:${aws_api_gateway_rest_api.apigw.id}/*/*"
 }
 
 /* Lambda Log groups */
-resource "aws_cloudwatch_log_group" "getS3LambdaLogGroup" {
-  name              = "/aws/lambda/${aws_lambda_function.getS3lambda.function_name}"
+resource "aws_cloudwatch_log_group" "reqS3LambdaLogGroup" {
+  name              = "/aws/lambda/${aws_lambda_function.reqS3lambda.function_name}"
   retention_in_days = 90
 
   tags = {
-    Application = "Signed get url lambda"
-    Environment = "Dev"
-  }
-}
-resource "aws_cloudwatch_log_group" "putS3LambdaLogGroup" {
-  name              = "/aws/lambda/${aws_lambda_function.putS3lambda.function_name}"
-  retention_in_days = 90
-
-  tags = {
-    Application = "Signed put url lambda"
+    Application = "Signed url lambda"
     Environment = "Dev"
   }
 }
 
-resource "aws_lambda_permission" "cloudwatch_getS3_allow" {
+resource "aws_lambda_permission" "cloudwatch_reqS3_allow" {
   statement_id  = "cloudwatch_getS3_allow"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.cwl_stream_lambda.function_name
   principal     = "logs.eu-central-1.amazonaws.com"
-  source_arn    = "${aws_cloudwatch_log_group.getS3LambdaLogGroup.arn}:*"
-}
-resource "aws_lambda_permission" "cloudwatch_putS3_allow" {
-  statement_id  = "cloudwatch_putS3_allow"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.cwl_stream_lambda.function_name
-  principal     = "logs.eu-central-1.amazonaws.com"
-  source_arn    = "${aws_cloudwatch_log_group.putS3LambdaLogGroup.arn}:*"
+  source_arn    = "${aws_cloudwatch_log_group.reqS3LambdaLogGroup.arn}:*"
 }
 
-resource "aws_cloudwatch_log_subscription_filter" "getS3_logfilter" {
+resource "aws_cloudwatch_log_subscription_filter" "reqS3_logfilter" {
   name            = "gets3_logsubscription"
-  log_group_name  = aws_cloudwatch_log_group.getS3LambdaLogGroup.name
+  log_group_name  = aws_cloudwatch_log_group.reqS3LambdaLogGroup.name
   filter_pattern  = ""
   destination_arn = aws_lambda_function.cwl_stream_lambda.arn
 
-  depends_on = [aws_lambda_permission.cloudwatch_getS3_allow]
-}
-resource "aws_cloudwatch_log_subscription_filter" "putS3_logfilter" {
-  name            = "puts3_logsubscription"
-  log_group_name  = aws_cloudwatch_log_group.putS3LambdaLogGroup.name
-  filter_pattern  = ""
-  destination_arn = aws_lambda_function.cwl_stream_lambda.arn
-
-  depends_on = [aws_lambda_permission.cloudwatch_putS3_allow]
+  depends_on = [aws_lambda_permission.cloudwatch_reqS3_allow]
 }
 
 #Lambda function written in Python that send a mail wether a job was completed successfully or not
