@@ -1,55 +1,58 @@
 import json
+import os
 import smtplib
+from email.message import EmailMessage
 
-def lambda_handler(event,context):
+
+def lambda_handler(event, context):
+    json_output = {
+        'statusCode': 200,
+        'body': json.dumps('Mail sent')
+    }
+
     for record in event['Records']:
         msg = str(record["body"]).split()
-        
+
         job_id = msg[0]
         user_mail = msg[1]
         message_type = int(msg[2])
 
-    res = send_email(user_mail,job_id, message_type) 
-    if(res == True):
-        return {
-            'statusCode': 200,
-            'body': json.dumps('Mail sent')
-        }
-    else:
-        return {
-            'statusCode': 500,
-            'body': json.dumps(res)
-        }
+        res = send_email(user_mail, job_id, message_type)
+        if res is not True:
+            json_output = {
+                'statusCode': 500,
+                'body': json.dumps(res)
+            }
+            
+    return json_output
+
 
 def send_email(user_mail, job_id, message_type):
     gmail_user = 'awss.unipv@gmail.com'
-    gmail_app_password = 'awssCC22'
-    
+    gmail_app_password = os.environ['psw_gmail']
     sent_from = gmail_user
-    sent_to = [user_mail]
-    
+    sent_to = user_mail
+
     if message_type == 1:
         sent_subject = "AWSS - Your job has been successfully completed"
-        sent_body = "Your job, with id "+ str(job_id)  +", has been successfully completed, go to the AWSS website to download the result"
+        sent_body = "Your job, with id " + str(job_id) + \
+                    ", has been successfully completed, go to the AWSS website to download the result"
     elif message_type == 0:
         sent_subject = "Your job has not been completed"
-        sent_body = "Unfortunately the job, with id "+ str(job_id) +", failed."
+        sent_body = "Unfortunately the job, with id " + str(job_id) + ", failed."
     else:
-        return("Wrong message type\n")
+        return "Wrong message type\n"
 
-    email_text = """\
-From: %s
-To: %s
-Subject: %s
-%s
-""" % (sent_from, ", ".join(sent_to), sent_subject, sent_body)
+    msg = EmailMessage()
+    msg['From'] = sent_from
+    msg['To'] = sent_to
+    msg['Subject'] = sent_subject
+    msg.set_content(sent_body)
 
     try:
-        session = smtplib.SMTP('smtp.gmail.com', 587) #use gmail with port
-        session.starttls() #enable security
-        session.login(gmail_user, gmail_app_password)
-        session.sendmail(sent_from, sent_to, email_text.encode("utf-8"))
-        session.close()
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as session:
+            session.login(gmail_user, gmail_app_password)
+            session.send_message(msg)
         return True
-    except Exception as exception:
-        return("Error: %s!\n\n" % exception)
+    except Exception as e:
+        return f"Error: {e}!"

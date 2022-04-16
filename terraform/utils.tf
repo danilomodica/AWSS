@@ -363,6 +363,12 @@ resource "aws_lambda_function" "sendMail" {
     target_arn = aws_sqs_queue.sendMailQueue_deadLetter.arn
   }
 
+  environment {
+    variables = {
+      psw_gmail = var.gmail
+    }
+  }
+
   depends_on = [data.archive_file.sendMailzip]
 
   tags = {
