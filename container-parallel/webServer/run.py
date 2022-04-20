@@ -5,13 +5,13 @@ import sys
 import os
 
 
-print("inizio")
+print("inizio", file=sys.stderr)
 data = os.environ
-print("recupera variabili ambiente")
+print("recupera variabili ambiente", file=sys.stderr)
 s3 =  boto3.resource('s3')
-print("istanzia s3 resource")
+print("istanzia s3 resource", file=sys.stderr)
 bucket_in = s3.Bucket(data['bucket_in'])
-print("bucket lettura fatto")
+print("bucket lettura fatto", file=sys.stderr)
 exception_happened = False
 # Lettura file
 exception_location = ""
@@ -32,7 +32,7 @@ if not exception_happened:
     filename = "file_risultato.txt"
     check = subprocess.check_call(["./lcs.exe",'myfile1.txt', 'myfile2.txt', "5", filename])
     # Scrittura dei file nel bucket dei risultati
-    print("lcs fatto")
+    print("lcs fatto", file=sys.stderr)
     try:
         with open(filename, "rb") as f:
             # response = s3_client.upload_file(f, data["bucket_out"], data["result_file"])
@@ -46,7 +46,7 @@ if not exception_happened:
         print(e, file=sys.stdout)
         exception_happened = True
         exception_location = "During upload of results"
-    print("scrittura risultato fatto")
+    print("scrittura risultato fatto", file=sys.stderr)
 
 results = {**data, "exception_happened": exception_happened, "exception_location": exception_location}	
 print(results)
