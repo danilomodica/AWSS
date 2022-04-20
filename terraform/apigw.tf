@@ -48,8 +48,7 @@ resource "aws_iam_policy" "apigw-lambda-policy" {
   name = "APIGatewayLambda"
 
   policy = templatefile("./templates/apiGatewayLambdaPolicy.json", {
-    arn_get = "${aws_lambda_function.getS3lambda.arn}",
-    arn_put = "${aws_lambda_function.putS3lambda.arn}"
+    arn_lambda = "${aws_lambda_function.reqS3lambda.arn}"
   })
 }
 
@@ -149,7 +148,7 @@ resource "aws_api_gateway_integration" "get" {
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
 
-  uri         = aws_lambda_function.getS3lambda.invoke_arn
+  uri         = aws_lambda_function.reqS3lambda.invoke_arn
   credentials = aws_iam_role.apigateway-role.arn
 }
 
@@ -211,7 +210,7 @@ resource "aws_api_gateway_integration" "postS3" {
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
 
-  uri         = aws_lambda_function.putS3lambda.invoke_arn
+  uri         = aws_lambda_function.reqS3lambda.invoke_arn
   credentials = aws_iam_role.apigateway-role.arn
 }
 

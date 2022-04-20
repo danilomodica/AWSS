@@ -16,6 +16,7 @@ terraform {
 
 variable "ak" { description = "Access key" }
 variable "ssk" { description = "Secret key" }
+variable "gmail" { description = "Gmail password" }
 variable "region" {
   description = "Region"
   default     = "eu-central-1"

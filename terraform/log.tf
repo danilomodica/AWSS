@@ -63,7 +63,7 @@ resource "aws_elasticsearch_domain" "AWSSElasticsearch" {
   access_policies = templatefile("./templates/openSearchPolicy.json", {})
 
   provisioner "local-exec" {
-    command = "curl -X PUT -u '${var.masterName}:${var.masterPass}' -H 'Content-Type:application/json' '${aws_elasticsearch_domain.AWSSElasticsearch.endpoint}/_plugins/_security/api/rolesmapping/all_access' -d '{\"backend_roles\" : [\"${aws_iam_role.lambda_opensearch_execution_role.arn}\"],\"hosts\" : [],\"users\" : [\"${var.masterName}\",\"${data.aws_caller_identity.current.arn}\"]}'"
+    command = "curl -X PUT -u '${var.masterName}:${var.masterPass}' -H 'Content-Type:application/json' 'https://${aws_elasticsearch_domain.AWSSElasticsearch.endpoint}/_plugins/_security/api/rolesmapping/all_access' -d '{\"backend_roles\" : [\"${aws_iam_role.lambda_opensearch_execution_role.arn}\"],\"hosts\" : [],\"users\" : [\"${var.masterName}\",\"${data.aws_caller_identity.current.arn}\"]}'"
   }
 
   tags = {
@@ -73,7 +73,7 @@ resource "aws_elasticsearch_domain" "AWSSElasticsearch" {
 }
 
 output "OpenSearch_Dashboard" {
-  value = "${aws_elasticsearch_domain.AWSSElasticsearch.endpoint}/_dashboards"
+  value = "https://${aws_elasticsearch_domain.AWSSElasticsearch.endpoint}/_dashboards"
 }
 
 #Lambda that streams log data to opensearch (it is the standard one but uses env variable to point the correct kibana endpoint)
