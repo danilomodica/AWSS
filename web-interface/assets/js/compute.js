@@ -13,14 +13,14 @@ document.getElementById("compute").addEventListener('click', function() {
 
 	/* Files Management */
 	var file1 = document.getElementById("file1ToUpload");
-	var filename1 = file1.value.split(/(\\|\/)/g).pop();
+	var filename1 = file1.value.replace(/^.*[\\\/]/, '').split('.')[0] + Math.floor(Math.random() * 100000) + '.txt';
 	var s3Url1;
-	var url1 = api_url + '/' + bucket + '?filename=' + filename1 + Math.floor(Math.random() * 100000);
+	var url1 = api_url + '/' + bucket + '?filename=' + filename1
 
 	var file2 = document.getElementById("file2ToUpload");
-	var filename2 = file2.value.split(/(\\|\/)/g).pop();
+	var filename2 = file2.value.replace(/^.*[\\\/]/, '').split('.')[0] + Math.floor(Math.random() * 100000) + '.txt';
 	var s3Url2;
-	var url2 = api_url + '/' + bucket + '?filename=' + filename2 + Math.floor(Math.random() * 100000);
+	var url2 = api_url + '/' + bucket + '?filename=' + filename2 
 
 	if (file1.files[0] != null && file2.files[0] != null) {
 		if (file1.files[0].type == "text/plain" && file2.files[0].type == "text/plain") {
@@ -94,10 +94,11 @@ document.getElementById("compute").addEventListener('click', function() {
 													else {
 														/* Adding message to SQS queue */
 														var message = filename1 + '-' + filename2 + '-' + email;
-														var url3 = api_url + '/sqs?Action=SendMessage&MessageBody=' + message + '&MessageGroupId=1';
-														
+														var url3 = api_url + '/sqs';
+
 														fetch(url3, {
 															method: 'POST',
+															body: 'Action=SendMessage&MessageBody=' + message + '&MessageGroupId=1'
 														})
 														.then(response => {
 															if (!response.ok) {
