@@ -1,5 +1,6 @@
 # Eseguito direttamente da il container che lo fa e poi si stoppa
 import boto3
+import botocore
 import subprocess
 import sys
 import os
@@ -50,3 +51,44 @@ if not exception_happened:
 
 results = {**data, "exception_happened": exception_happened, "exception_location": exception_location}	
 print(results)
+
+
+# Inserimento nella coda dei risultati
+AWS_REGION = "eu-central-1"
+sqs_client = boto3.client("sqs", region_name=AWS_REGION)
+
+
+def send_queue_message(queue_url, msg_attributes, msg_body):
+    """
+    Sends a message to the specified queue.
+    """
+    try:
+        response = sqs_client.send_message(QueueUrl=queue_url,
+                                           MessageAttributes=msg_attributes,
+                                           MessageBody=msg_body)
+    except botocore.exceptions.ClientError:
+        # logger.exception(f'Could not send meessage to the - {queue_url}.')
+        raise
+    else:
+        return response
+
+# CONSTANTS
+QUEUE_URL = data["queue_url"]
+
+# MSG_ATTRIBUTES = {
+#     'Title': {
+#         'DataType': 'String',
+#         'StringValue': 'Working with SQS in Python using Boto3'
+#     },
+#     'Author': {
+#         'DataType': 'String',
+#         'StringValue': 'Abhinav D'
+#     }
+# }
+MSG_ATTRIBUTES = {}
+
+id = data["result_file"].split(".")[0]
+
+MSG_BODY = f'{id} {data["email"]} 1'
+
+msg = send_queue_message(QUEUE_URL, MSG_ATTRIBUTES, MSG_BODY)
