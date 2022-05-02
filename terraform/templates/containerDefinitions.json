@@ -1,0 +1,8 @@
+[
+    {
+        "name": "myapp",
+        "image": "${repo}",
+        "cpu": 0,
+        "essential": true
+    }
+]
