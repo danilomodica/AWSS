@@ -125,7 +125,7 @@ resource "aws_sqs_queue" "inputFIFOQueue" {
   message_retention_seconds  = 345600
   max_message_size           = 262144
   delay_seconds              = 0
-  visibility_timeout_seconds = 10
+  visibility_timeout_seconds = 60
 
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.inputFIFOQueue_Deadletter.arn
