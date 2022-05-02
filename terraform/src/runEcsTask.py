@@ -2,13 +2,12 @@ import json
 import boto3
 import sys
 import random
+import os
 
 
 def lambda_handler(event, context):
-    print("evento", file=sys.stderr)
     print(event, file=sys.stderr)
         
-    
     for record in event['Records']:
         print(record, file=sys.stderr)
         msg = str(record["body"]).split('-')
@@ -19,14 +18,12 @@ def lambda_handler(event, context):
         
         rand = random.randint(1000, 10**6)
 
-           
-        # TODO implement
-        FARGATE_CLUSTER = "arn:aws:ecs:eu-central-1:389487414326:cluster/fargate-cluster"
-        REGION = "eu-central-1"
-        FARGATE_TASK_DEF_NAME = "myapp4:5"
+        FARGATE_CLUSTER = os.environ['cluster']
+        REGION = os.environ['region']
+        FARGATE_TASK_DEF_NAME = os.environ['task_definition_name']
+        APP_NAME_FOR_OVERRIDE = os.environ['app_name_override']
         FARGATE_SUBNET_ID = "subnet-094570c6dece4a335"
         SECURITY_GROUP_ID = "sg-0488ade7aedc940b6"
-        APP_NAME_FOR_OVERRIDE = 'myapp4'
     
         client = boto3.client('ecs', region_name=REGION)
         response = client.run_task(
@@ -51,21 +48,9 @@ def lambda_handler(event, context):
                     {
                         'name': APP_NAME_FOR_OVERRIDE,
                         'environment': [
-                            # {
-                            #     'name': 'DOCKER_REPOSITORY',
-                            #     'value': dockerhub_repo
-                            # },
-                            # {
-                            #     'name': 'SERVICE',
-                            #     'value': service
-                            # },
-                            # {
-                            #     'name': 'CIRCLE_SHA1',
-                            #     'value': docker_tag
-                            # },
                             {
                                 "name": 'bucket_in',
-                                "value": 'awss-input-files'
+                                "value": os.environ['bucket_in']
                             },
                                                     {
                                 "name": 'file1',
@@ -77,7 +62,7 @@ def lambda_handler(event, context):
                             },
                                                     {
                                 "name": 'bucket_out',
-                                "value": 'awss-result-files'
+                                "value": os.environ['bucket_out']
                             },
                             {
                                 "name": "result_file",
@@ -89,7 +74,7 @@ def lambda_handler(event, context):
                             },
                             {
                                 "name": "queue_url",
-                                "value": "https://sqs.eu-central-1.amazonaws.com/389487414326/sendMailQueue"
+                                "value": os.environ['queue_url']
                             }
                         ],
                     },
@@ -99,6 +84,5 @@ def lambda_handler(event, context):
     
     return {
         'statusCode': 200,
-        # 'body': json.dumps('Hello from Lambda!'),
-        "response": str(response),
+        'response': str(response),
     }
