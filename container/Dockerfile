@@ -1,6 +1,6 @@
 FROM ubuntu:latest
 WORKDIR /app
-COPY ./webServer ./
+COPY ./data ./
 ENV DEBIAN_FRONTEND noninteractive
 # ENV FLASK_APP webServer
 # ENV FLASK_RUN_HOST 127.0.0.1

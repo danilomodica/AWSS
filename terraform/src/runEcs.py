@@ -1,16 +1,23 @@
 import json
 import boto3
+import sys
+import random
 
 
 def lambda_handler(event, context):
+    print("evento", file=sys.stderr)
+    print(event, file=sys.stderr)
+        
     
     for record in event['Records']:
-        
-        msg = str(record["body"]).split(' - ')
+        print(record, file=sys.stderr)
+        msg = str(record["body"]).split('-')
         
         path1= msg[0]
         path2 = msg[1]
         email = msg[2]
+        
+        rand = random.randint(1000, 10**6)
 
            
         # TODO implement
@@ -72,9 +79,17 @@ def lambda_handler(event, context):
                                 "name": 'bucket_out',
                                 "value": 'awss-result-files'
                             },
-                                                    {
+                            {
                                 "name": "result_file",
+                                "value": str(rand)+".txt"
+                            },
+                            {
+                                "name": "email",
                                 "value": email
+                            },
+                            {
+                                "name": "queue_url",
+                                "value": "https://sqs.eu-central-1.amazonaws.com/389487414326/sendMailQueue"
                             }
                         ],
                     },
