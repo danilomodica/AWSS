@@ -5,7 +5,7 @@ docker build -t container-parallel .
 aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin 389487414326.dkr.ecr.eu-central-1.amazonaws.com
 
 #Taggare docker image:
-docker tag container-parallel 389487414326.dkr.ecr.eu-central-1.amazonaws.com/myapp-test
+docker tag container-parallel 389487414326.dkr.ecr.eu-central-1.amazonaws.com/myapp
 
 #Pushare
-docker push 389487414326.dkr.ecr.eu-central-1.amazonaws.com/myapp-test
+docker push 389487414326.dkr.ecr.eu-central-1.amazonaws.com/myapp
