@@ -16,11 +16,6 @@ resource "aws_ecr_repository" "myapp" {
   }
 }
 
-data "aws_ecr_image" "docker" {
-  repository_name = "myapp"
-  image_tag       = "latest"
-}
-
 /* Role for ECS task definition */
 resource "aws_iam_role" "ecs-task-exec" {
   name = "ecs-task-execution-role"
