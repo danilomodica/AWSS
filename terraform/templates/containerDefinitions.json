@@ -3,6 +3,14 @@
         "name": "myapp",
         "image": "${repo}",
         "cpu": 0,
-        "essential": true
+        "essential": true,
+        "logConfiguration": {
+            "logDriver": "awslogs",
+            "options": {
+                "awslogs-group": "/aws/ecs/myapp",
+                "awslogs-region": "eu-central-1",
+                "awslogs-stream-prefix": ""
+            }
+        }
     }
 ]

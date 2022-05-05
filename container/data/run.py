@@ -56,7 +56,7 @@ id = data["result_file"].split(".")[0]
 MSG_BODY = f'{id} {data["email"]} 1'
 
 try:
-    response = sqs_client.send_message(QueueUrl=queue_url, MessageAttributes=msg_attributes, MessageBody=msg_body)
+    response = sqs_client.send_message(QueueUrl=QUEUE_URL, MessageAttributes=MSG_ATTRIBUTES, MessageBody=MSG_BODY)
 except botocore.exceptions.ClientError:
     raise
 print("Message added to the SQS queue")
