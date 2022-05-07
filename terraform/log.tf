@@ -60,7 +60,7 @@ resource "aws_elasticsearch_domain" "AWSSOpenSearch" {
     }
   }
 
-  access_policies = templatefile("./templates/OwnerStatement.json", {aws_principal="*", action="es:*", resource_arn="arn:aws:es:*:*:domain/awss-logs/*"}) //arn cannot be computer prior
+  access_policies = templatefile("./templates/OwnerStatement.json", { aws_principal = "*", action = "es:*", resource_arn = "arn:aws:es:*:*:domain/awss-logs/*" }) //arn cannot be computer prior
 
   provisioner "local-exec" {
     command = "curl -X PUT -u '${var.masterName}:${var.masterPass}' -H 'Content-Type:application/json' 'https://${aws_elasticsearch_domain.AWSSOpenSearch.endpoint}/_plugins/_security/api/rolesmapping/all_access' -d '{\"backend_roles\" : [\"${aws_iam_role.lambda_opensearch_execution_role.arn}\"],\"hosts\" : [],\"users\" : [\"${var.masterName}\",\"${data.aws_caller_identity.current.arn}\"]}'"

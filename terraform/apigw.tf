@@ -3,7 +3,7 @@ resource "aws_iam_policy" "sqs-policy" {
   name        = "apigw-sqsQueue"
   description = "Policy to put messages into SQS"
 
-  policy = templatefile("./templates/SQSSend.json", { queue_name = "${aws_sqs_queue.inputFIFOQueue.name}"})
+  policy = templatefile("./templates/SQSSend.json", { queue_name = "${aws_sqs_queue.inputFIFOQueue.name}" })
 }
 
 /* SQS IAM Role */
@@ -47,7 +47,7 @@ resource "aws_iam_role" "s3-lambda-role" {
 resource "aws_iam_policy" "apigw-lambda-policy" {
   name = "APIGatewayLambda"
 
-  policy = templatefile("./templates/LambdaInvoke.json", {arn_lambda = "${aws_lambda_function.reqS3lambda.arn}"})
+  policy = templatefile("./templates/LambdaInvoke.json", { arn_lambda = "${aws_lambda_function.reqS3lambda.arn}" })
 }
 
 /* API Gateway IAM Role */

@@ -163,8 +163,8 @@ resource "aws_sqs_queue" "inputFIFOQueue_Deadletter" {
 resource "aws_sqs_queue_policy" "inputFIFOQueuePolicy" {
   queue_url = aws_sqs_queue.inputFIFOQueue.id
 
-  policy = templatefile("./templates/OwnerStatement.json", {aws_principal="arn:aws:iam::${data.aws_caller_identity.current.id}:root", action="SQS:*" , resource_arn = "${aws_sqs_queue.inputFIFOQueue.arn}"})
-  
+  policy = templatefile("./templates/OwnerStatement.json", { aws_principal = "arn:aws:iam::${data.aws_caller_identity.current.id}:root", action = "SQS:*", resource_arn = "${aws_sqs_queue.inputFIFOQueue.arn}" })
+
   depends_on = [data.aws_caller_identity.current,
   aws_sqs_queue.inputFIFOQueue]
 }
@@ -172,8 +172,8 @@ resource "aws_sqs_queue_policy" "inputFIFOQueuePolicy" {
 resource "aws_sqs_queue_policy" "inputFIFOQueue_DeadletterPolicy" {
   queue_url = aws_sqs_queue.inputFIFOQueue_Deadletter.id
 
-  policy = templatefile("./templates/OwnerStatement.json", {aws_principal="arn:aws:iam::${data.aws_caller_identity.current.id}:root", action="SQS:*", resource_arn = "${aws_sqs_queue.inputFIFOQueue_Deadletter.arn}"})
-  
+  policy = templatefile("./templates/OwnerStatement.json", { aws_principal = "arn:aws:iam::${data.aws_caller_identity.current.id}:root", action = "SQS:*", resource_arn = "${aws_sqs_queue.inputFIFOQueue_Deadletter.arn}" })
+
   depends_on = [data.aws_caller_identity.current,
   aws_sqs_queue.inputFIFOQueue_Deadletter]
 }
@@ -223,7 +223,7 @@ resource "aws_sqs_queue" "sendMailQueue_deadLetter" {
 resource "aws_sqs_queue_policy" "sendMailQueuePolicy" {
   queue_url = aws_sqs_queue.sendMailQueue.id
 
-  policy = templatefile("./templates/OwnerStatement.json", {aws_principal="arn:aws:iam::${data.aws_caller_identity.current.id}:root", action="SQS:*", resource_arn = "${aws_sqs_queue.sendMailQueue.arn}"})
+  policy = templatefile("./templates/OwnerStatement.json", { aws_principal = "arn:aws:iam::${data.aws_caller_identity.current.id}:root", action = "SQS:*", resource_arn = "${aws_sqs_queue.sendMailQueue.arn}" })
 
   depends_on = [data.aws_caller_identity.current,
   aws_sqs_queue.sendMailQueue]
@@ -232,8 +232,8 @@ resource "aws_sqs_queue_policy" "sendMailQueuePolicy" {
 resource "aws_sqs_queue_policy" "sendMailQueue_deadLetterPolicy" {
   queue_url = aws_sqs_queue.sendMailQueue_deadLetter.id
 
-  policy = templatefile("./templates/OwnerStatement.json", {aws_principal="arn:aws:iam::${data.aws_caller_identity.current.id}:root", action="SQS:*", resource_arn = "${aws_sqs_queue.sendMailQueue_deadLetter.arn}"})
-  
+  policy = templatefile("./templates/OwnerStatement.json", { aws_principal = "arn:aws:iam::${data.aws_caller_identity.current.id}:root", action = "SQS:*", resource_arn = "${aws_sqs_queue.sendMailQueue_deadLetter.arn}" })
+
   depends_on = [data.aws_caller_identity.current,
   aws_sqs_queue.sendMailQueue_deadLetter]
 }
@@ -433,14 +433,14 @@ resource "aws_iam_policy" "SQSPollerPolicySendMail" {
   name        = "SendMailPoller"
   description = "Policy to allow polling actions to sendmail lambda"
 
-  policy = templatefile("./templates/SQSPoller.json", {queue_name="${aws_sqs_queue.sendMailQueue.name}"})
+  policy = templatefile("./templates/SQSPoller.json", { queue_name = "${aws_sqs_queue.sendMailQueue.name}" })
 }
 
 resource "aws_iam_policy" "SendtoDLQPolicy" {
   name        = "SendToSendMailDLQ"
   description = "Policy to allow sending to dlq to sendmail lambda"
 
-  policy = templatefile("./templates/SQSSend.json", {queue_name="${aws_sqs_queue.sendMailQueue_deadLetter.name}"})
+  policy = templatefile("./templates/SQSSend.json", { queue_name = "${aws_sqs_queue.sendMailQueue_deadLetter.name}" })
 }
 
 resource "aws_iam_policy" "cwlogging" {
