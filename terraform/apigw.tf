@@ -3,14 +3,14 @@ resource "aws_iam_policy" "sqs-policy" {
   name        = "apigw-sqsQueue"
   description = "Policy to put messages into SQS"
 
-  policy = templatefile("./templates/SQSApiGWPolicy.json", { sqs = "${aws_sqs_queue.inputFIFOQueue.arn}" })
+  policy = templatefile("./templates/SQSSend.json", { queue_name = "${aws_sqs_queue.inputFIFOQueue.name}"})
 }
 
 /* SQS IAM Role */
 resource "aws_iam_role" "apigateway-sqs-role" {
   name = "apigw-send-msg-sqs"
 
-  assume_role_policy = templatefile("./templates/apiGateway.json", {})
+  assume_role_policy = templatefile("./templates/APIGWRole.json", {})
 }
 
 /* SQS Role - Policy attachments */
@@ -20,43 +20,49 @@ resource "aws_iam_role_policy_attachment" "role-policy-attachment1" {
 }
 resource "aws_iam_role_policy_attachment" "role-policy-attachment2" {
   role       = aws_iam_role.apigateway-sqs-role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+  policy_arn = aws_iam_policy.cwlogging.arn
 }
 
 /* S3 IAM Policies for Lambda Role */
 resource "aws_iam_policy" "put-s3-lambda-policy" {
   name        = "S3PutLambda"
   description = "Policy to put objects into S3 through lambda"
-  policy      = templatefile("./templates/bucketPolicy.json", { bucket = "${aws_s3_bucket.AWSSInputFiles.id}", action = "*" })
+  policy      = templatefile("./templates/S3Permissions.json", { bucket = "${aws_s3_bucket.AWSSInputFiles.id}", action = "PutObject" })
 }
 
 resource "aws_iam_policy" "get-s3-lambda-policy" {
   name        = "S3GetLambda"
   description = "Policy to get objects from S3 through lambda"
-  policy      = templatefile("./templates/bucketPolicy.json", { bucket = "${aws_s3_bucket.AWSSResultFiles.id}", action = "*" })
+  policy      = templatefile("./templates/S3Permissions.json", { bucket = "${aws_s3_bucket.AWSSResultFiles.id}", action = "GetObject" })
 }
 
 /* Lambda IAM Role */
 resource "aws_iam_role" "s3-lambda-role" {
   name = "S3LambdaRole"
 
-  assume_role_policy = templatefile("./templates/lambdaRolePolicy.json", {})
+  assume_role_policy = templatefile("./templates/LambdaRole.json", {})
 }
 
 /* API Gateway Lambda Policy*/
 resource "aws_iam_policy" "apigw-lambda-policy" {
   name = "APIGatewayLambda"
 
-  policy = templatefile("./templates/apiGatewayLambdaPolicy.json", {
-    arn_lambda = "${aws_lambda_function.reqS3lambda.arn}"
-  })
+  policy = templatefile("./templates/LambdaInvoke.json", {arn_lambda = "${aws_lambda_function.reqS3lambda.arn}"})
 }
 
 /* API Gateway IAM Role */
 resource "aws_iam_role" "apigateway-role" {
   name = "APIGatewayS3LambdaRole"
 
-  assume_role_policy = templatefile("./templates/apiGateway.json", {})
+  assume_role_policy = templatefile("./templates/APIGWRole.json", {})
+}
+
+resource "aws_iam_policy" "APICWlogging" {
+  name        = "APICWlogging"
+  description = "IAM policy for APIGW logging to Cloudwatch"
+  path        = "/"
+
+  policy = templatefile("./templates/CWLoggingAPIGW.json", {})
 }
 
 /* API Gateway Role - Policy attachments */
@@ -66,7 +72,7 @@ resource "aws_iam_role_policy_attachment" "role-policy-attach1" {
 }
 resource "aws_iam_role_policy_attachment" "role-policy-attach2" {
   role       = aws_iam_role.apigateway-role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+  policy_arn = aws_iam_policy.APICWlogging.arn
 }
 
 /* Lambda Role - Policy attachments */
@@ -80,7 +86,7 @@ resource "aws_iam_role_policy_attachment" "role-policy-attach4" {
 }
 resource "aws_iam_role_policy_attachment" "role-policy-attach5" {
   role       = aws_iam_role.s3-lambda-role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+  policy_arn = aws_iam_policy.cwlogging.arn
 }
 
 /* API Gateway Configuration */
@@ -491,7 +497,7 @@ resource "aws_lambda_permission" "cloudwatch_apigw_allow" {
   statement_id  = "cloudwatch_apigw_allow"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.cwl_stream_lambda.function_name
-  principal     = "logs.eu-central-1.amazonaws.com"
+  principal     = "logs.${var.region}.amazonaws.com"
   source_arn    = "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.apigw.id}/${aws_api_gateway_stage.devStage.stage_name}:*"
 }
 

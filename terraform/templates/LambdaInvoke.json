@@ -4,9 +4,7 @@
         {
             "Effect": "Allow",
             "Action": "lambda:InvokeFunction",
-            "Resource": [
-                "${arn_lambda}"
-            ]
+            "Resource": "${arn_lambda}"
         }
     ]
   }

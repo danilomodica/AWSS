@@ -163,17 +163,19 @@ resource "aws_sqs_queue" "inputFIFOQueue_Deadletter" {
 resource "aws_sqs_queue_policy" "inputFIFOQueuePolicy" {
   queue_url = aws_sqs_queue.inputFIFOQueue.id
 
-  policy = templatefile("./templates/SQSFifoPolicy.json", {
-    region     = "${var.region}",
-    iam        = "${data.aws_caller_identity.current.account_id}",
-    queue_name = "${aws_sqs_queue.inputFIFOQueue.id}",
-    role_name  = "${aws_iam_role.apigateway-sqs-role.name}"
-  })
+  policy = templatefile("./templates/OwnerStatement.json", {aws_principal="arn:aws:iam::${data.aws_caller_identity.current.id}:root", action="SQS:*" , resource_arn = "${aws_sqs_queue.inputFIFOQueue.arn}"})
+  
+  depends_on = [data.aws_caller_identity.current,
+  aws_sqs_queue.inputFIFOQueue]
+}
 
-  depends_on = [
-    data.aws_caller_identity.current,
-    aws_iam_role.apigateway-sqs-role
-  ]
+resource "aws_sqs_queue_policy" "inputFIFOQueue_DeadletterPolicy" {
+  queue_url = aws_sqs_queue.inputFIFOQueue_Deadletter.id
+
+  policy = templatefile("./templates/OwnerStatement.json", {aws_principal="arn:aws:iam::${data.aws_caller_identity.current.id}:root", action="SQS:*", resource_arn = "${aws_sqs_queue.inputFIFOQueue_Deadletter.arn}"})
+  
+  depends_on = [data.aws_caller_identity.current,
+  aws_sqs_queue.inputFIFOQueue_Deadletter]
 }
 
 # Queue with information to send mails about the result of a job execution
@@ -218,6 +220,24 @@ resource "aws_sqs_queue" "sendMailQueue_deadLetter" {
   }
 }
 
+resource "aws_sqs_queue_policy" "sendMailQueuePolicy" {
+  queue_url = aws_sqs_queue.sendMailQueue.id
+
+  policy = templatefile("./templates/OwnerStatement.json", {aws_principal="arn:aws:iam::${data.aws_caller_identity.current.id}:root", action="SQS:*", resource_arn = "${aws_sqs_queue.sendMailQueue.arn}"})
+
+  depends_on = [data.aws_caller_identity.current,
+  aws_sqs_queue.sendMailQueue]
+}
+
+resource "aws_sqs_queue_policy" "sendMailQueue_deadLetterPolicy" {
+  queue_url = aws_sqs_queue.sendMailQueue_deadLetter.id
+
+  policy = templatefile("./templates/OwnerStatement.json", {aws_principal="arn:aws:iam::${data.aws_caller_identity.current.id}:root", action="SQS:*", resource_arn = "${aws_sqs_queue.sendMailQueue_deadLetter.arn}"})
+  
+  depends_on = [data.aws_caller_identity.current,
+  aws_sqs_queue.sendMailQueue_deadLetter]
+}
+
 #Cloudwatch alarms in case too much messages are sent to dlq queue
 resource "aws_cloudwatch_metric_alarm" "sendMailDLQ_alarm" {
   alarm_name                = "sendMailDQL_alarm"
@@ -249,18 +269,6 @@ resource "aws_cloudwatch_metric_alarm" "FifoDLQ_alarm" {
   alarm_actions             = [aws_sns_topic.notify.arn]
 
   dimensions = { QueueName = "${aws_sqs_queue.inputFIFOQueue_Deadletter.name}" }
-}
-
-resource "aws_sqs_queue_policy" "sendMailQueuePolicy" {
-  queue_url = aws_sqs_queue.sendMailQueue.id
-
-  policy = templatefile("./templates/SQSStandardPolicy.json", {
-    region     = "${var.region}",
-    iam        = "${data.aws_caller_identity.current.account_id}",
-    queue_name = "sendMailQueue"
-  })
-
-  depends_on = [data.aws_caller_identity.current]
 }
 
 /* SNS topic to notify in case of critical problems */
@@ -326,7 +334,7 @@ resource "aws_lambda_permission" "cloudwatch_reqS3_allow" {
   statement_id  = "cloudwatch_getS3_allow"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.cwl_stream_lambda.function_name
-  principal     = "logs.eu-central-1.amazonaws.com"
+  principal     = "logs.${var.region}.amazonaws.com"
   source_arn    = "${aws_cloudwatch_log_group.reqS3LambdaLogGroup.arn}:*"
 }
 
@@ -392,7 +400,7 @@ resource "aws_lambda_permission" "cloudwatch_sendMail_allow" {
   statement_id  = "cloudwatch_sendMail_allow"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.cwl_stream_lambda.function_name
-  principal     = "logs.eu-central-1.amazonaws.com"
+  principal     = "logs.${var.region}.amazonaws.com"
   source_arn    = "${aws_cloudwatch_log_group.sendMailLogGroup.arn}:*"
 }
 
@@ -414,34 +422,46 @@ resource "aws_lambda_event_source_mapping" "eventSourceMapping" {
 }
 
 #Useful policies and roles to have a working trigger (SQS) for Lambda
-resource "aws_iam_policy" "SQSPollerPolicy" {
-  name        = "SQSPollerExecutionRole"
-  description = "Policy to allow polling actions to lambdas"
-
-  policy = templatefile("./templates/SQSPollerExecutionRole.json", {})
-}
-
-resource "aws_iam_policy" "lambdaLogging" {
-  name        = "lambdaLogging"
-  description = "IAM policy for logging from a lambda"
-  path        = "/"
-
-  policy = templatefile("./templates/CloudwatchPolicy.json", {})
-}
-
 resource "aws_iam_role" "lambdaSQSRole" {
   name        = "lambdaSQSRole"
   description = "Lambda role to give sqs polling and logging permission to lambdas"
 
-  assume_role_policy = templatefile("./templates/lambdaRolePolicy.json", {})
+  assume_role_policy = templatefile("./templates/LambdaRole.json", {})
+}
+
+resource "aws_iam_policy" "SQSPollerPolicySendMail" {
+  name        = "SendMailPoller"
+  description = "Policy to allow polling actions to sendmail lambda"
+
+  policy = templatefile("./templates/SQSPoller.json", {queue_name="${aws_sqs_queue.sendMailQueue.name}"})
+}
+
+resource "aws_iam_policy" "SendtoDLQPolicy" {
+  name        = "SendToSendMailDLQ"
+  description = "Policy to allow sending to dlq to sendmail lambda"
+
+  policy = templatefile("./templates/SQSSend.json", {queue_name="${aws_sqs_queue.sendMailQueue_deadLetter.name}"})
+}
+
+resource "aws_iam_policy" "cwlogging" {
+  name        = "cwlogging"
+  description = "IAM policy for logging to Cloudwatch"
+  path        = "/"
+
+  policy = templatefile("./templates/CWLoggingPermission.json", {})
 }
 
 resource "aws_iam_role_policy_attachment" "lambdaLogs1" {
   role       = aws_iam_role.lambdaSQSRole.name
-  policy_arn = aws_iam_policy.lambdaLogging.arn
+  policy_arn = aws_iam_policy.cwlogging.arn
 }
 
 resource "aws_iam_role_policy_attachment" "lambdaLogs2" {
   role       = aws_iam_role.lambdaSQSRole.name
-  policy_arn = aws_iam_policy.SQSPollerPolicy.arn
+  policy_arn = aws_iam_policy.SQSPollerPolicySendMail.arn
+}
+
+resource "aws_iam_role_policy_attachment" "lambdaLogs3" {
+  role       = aws_iam_role.lambdaSQSRole.name
+  policy_arn = aws_iam_policy.SendtoDLQPolicy.arn
 }
