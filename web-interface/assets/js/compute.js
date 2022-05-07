@@ -43,7 +43,8 @@ document.getElementById("compute").addEventListener('click', function() {
 						swal.close();
 						Swal.fire({
 							icon: 'error',
-							title: response.status + ' ' + response.statusText
+							title: response.status + ' ' + response.statusText,
+							confirmButtonColor: '#4154f1'
 						});
 					}
 					else {
@@ -59,7 +60,8 @@ document.getElementById("compute").addEventListener('click', function() {
 									swal.close();
 									Swal.fire({
 										icon: 'error',
-										title: response.status + ' ' + response.statusText
+										title: response.status + ' ' + response.statusText,
+										confirmButtonColor: '#4154f1'
 									});
 								}
 								else {
@@ -72,7 +74,8 @@ document.getElementById("compute").addEventListener('click', function() {
 											swal.close();
 											Swal.fire({
 												icon: 'error',
-												title: response.status + ' ' + response.statusText
+												title: response.status + ' ' + response.statusText,
+												confirmButtonColor: '#4154f1'
 											});
 										}
 										else {
@@ -88,7 +91,8 @@ document.getElementById("compute").addEventListener('click', function() {
 														swal.close();
 														Swal.fire({
 															icon: 'error',
-															title: response.status + ' ' + response.statusText
+															title: response.status + ' ' + response.statusText,
+															confirmButtonColor: '#4154f1'
 														});
 													}
 													else {
@@ -105,7 +109,8 @@ document.getElementById("compute").addEventListener('click', function() {
 																swal.close();
 																Swal.fire({
 																	icon: 'error',
-																	title: response.status + ' ' + response.statusText
+																	title: response.status + ' ' + response.statusText,
+																	confirmButtonColor: '#4154f1'
 																});
 															}
 															else {
@@ -113,7 +118,8 @@ document.getElementById("compute").addEventListener('click', function() {
 																Swal.fire({
 																	icon: 'success',
 																	title: 'Your files have been uploaded!',
-																	text: 'You will soon receive an email with the result'
+																	text: 'You will soon receive an email with the result',
+																	confirmButtonColor: '#4154f1'
 																});
 															}
 														})
@@ -122,7 +128,8 @@ document.getElementById("compute").addEventListener('click', function() {
 															Swal.fire({
 																icon: 'error',
 																title: 'API Server Error',
-																text: error.message
+																text: error.message,
+																confirmButtonColor: '#4154f1'
 															});
 														});
 													}
@@ -132,7 +139,8 @@ document.getElementById("compute").addEventListener('click', function() {
 													Swal.fire({
 														icon: 'error',
 														title: 'API Server Error',
-														text: error.message
+														text: error.message,
+														confirmButtonColor: '#4154f1'
 													});
 												});
 											});
@@ -143,7 +151,8 @@ document.getElementById("compute").addEventListener('click', function() {
 										Swal.fire({
 											icon: 'error',
 											title: 'API Server Error',
-											text: error.message
+											text: error.message,
+											confirmButtonColor: '#4154f1'
 										});
 									});
 								}
@@ -153,7 +162,8 @@ document.getElementById("compute").addEventListener('click', function() {
 								Swal.fire({
 									icon: 'error',
 									title: 'API Server Error',
-									text: error.message
+									text: error.message,
+									confirmButtonColor: '#4154f1'
 								});
 							});
 						});
@@ -164,28 +174,32 @@ document.getElementById("compute").addEventListener('click', function() {
 					Swal.fire({
 						icon: 'error',
 						title: 'API Server Error',
-						text: error.message
+						text: error.message,
+						confirmButtonColor: '#4154f1'
 					});
 				});
 			}
 			else {
 				Swal.fire({
 					icon: 'error',
-					title: 'Enter an email address!'
+					title: 'Enter an email address!',
+					confirmButtonColor: '#4154f1'
 				});
 			}
 		}
 		else {
 			Swal.fire({
 				icon: 'error',
-				title: 'Only txt files are accepted!'
+				title: 'Only txt files are accepted!',
+				confirmButtonColor: '#4154f1'
 			});
 		}
 	}
 	else {
 		Swal.fire({
 			icon: 'error',
-			title: 'Choose two files!'
+			title: 'Choose two files!',
+			confirmButtonColor: '#4154f1'
 		});
 	}
 });
