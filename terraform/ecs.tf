@@ -7,8 +7,8 @@ resource "aws_ecs_cluster" "ecs-cluster" {
   }
 }
 
-resource "aws_ecr_repository" "myapp" {
-  name                 = "myapp"
+resource "aws_ecr_repository" "lcs" {
+  name                 = "lcs"
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
@@ -21,17 +21,24 @@ resource "aws_iam_role" "ecs-task-exec" {
   name = "ecs-task-execution-role"
   description = "Allows the execution of ECS tasks"
 
-  assume_role_policy = templatefile("./templates/ecsTaskExecution.json", { version = "2008-10-17" })
+  assume_role_policy = templatefile("./templates/ecsTaskExecution.json", {})
+}
+
+resource "aws_iam_policy" "ecr-policy" {
+  name        = "ECRPolicy"
+  description = ""
+
+  policy = templatefile("./templates/ecrPolicy.json", {}) //cambiare eventualmente le risorse da tutti a un sottogruppo
 }
 
 resource "aws_iam_role_policy_attachment" "ecs-task-role-policy-attachment1" {
   role       = aws_iam_role.ecs-task-exec.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+  policy_arn = aws_iam_policy.ecr-policy.arn
 }
 
 resource "aws_iam_role_policy_attachment" "ecs-task-role-policy-attachment2" {
   role       = aws_iam_role.ecs-task-exec.name
-  policy_arn = "arn:aws:iam::aws:policy/CloudWatchFullAccess"
+  policy_arn = aws_iam_policy.lambdaLogging.arn
 }
 
 /* Role to allow ecs to access s3, sqs and ecr */ 
@@ -39,39 +46,46 @@ resource "aws_iam_role" "ecs-resources-access" {
   name = "ecs-resources-access"
   description = "Allows ECS tasks to call AWS services on your behalf"
 
-  assume_role_policy = templatefile("./templates/ecsTaskExecution.json", { version = "2012-10-17" })
-}
-
-resource "aws_iam_policy" "ecs-cloudwatch-policy" {
-  name        = "CloudWatchLogEcsTask"
-  description = "Policy to access logs from ECS"
-
-  policy = templatefile("./templates/CloudWatchLogEcsTask.json", {})
+  assume_role_policy = templatefile("./templates/ecsTaskExecution.json", {})
 }
 
 resource "aws_iam_role_policy_attachment" "ecs-resources-access-role-policy-attachment1" {
   role       = aws_iam_role.ecs-resources-access.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+  policy_arn = aws_iam_policy.ecr-policy.arn //come sopra
+}
+
+resource "aws_iam_policy" "ECSbucketPolicy" {
+  name        = "ECSBucketPolicy"
+  description = ""
+
+  policy = templatefile("templates/ecsS3Access.json", { bucketIn = "${aws_s3_bucket.AWSSInputFiles.id}", bucketOut = "${aws_s3_bucket.AWSSResultFiles.id}"})
+}
+
+resource "aws_iam_policy" "ECSSQSPolicy" {
+  name        = "ECSSQSPolicy"
+  description = ""
+
+  policy = templatefile("templates/ecsSQSPolicy.json", { queue_name = "${aws_sqs_queue.sendMailQueue.name}"})
 }
 
 resource "aws_iam_role_policy_attachment" "ecs-resources-access-role-policy-attachment2" {
   role       = aws_iam_role.ecs-resources-access.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+  policy_arn = aws_iam_policy.ECSbucketPolicy.arn
 }
 
 resource "aws_iam_role_policy_attachment" "ecs-resources-access-role-policy-attachment3" {
   role       = aws_iam_role.ecs-resources-access.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSQSFullAccess"
+  policy_arn = aws_iam_policy.ECSSQSPolicy.arn
 }
 
 resource "aws_iam_role_policy_attachment" "ecs-resources-access-role-policy-attachment4" {
   role       = aws_iam_role.ecs-resources-access.name
-  policy_arn = aws_iam_policy.ecs-cloudwatch-policy.arn
+  policy_arn = aws_iam_policy.lambdaLogging.arn
 }
 
 resource "aws_ecs_task_definition" "ecs-task-definition" {
-  family = "myapp"
-  container_definitions = templatefile("./templates/containerDefinitions.json", { repo = "${aws_ecr_repository.myapp.repository_url}" })
+  family = "lcs"
+  container_definitions = templatefile("./templates/containerDefinitions.json", { repo = "${aws_ecr_repository.lcs.repository_url}", logGroup = "${aws_cloudwatch_log_group.ECSLogGroup.name}" })
   
   task_role_arn = aws_iam_role.ecs-resources-access.arn
   execution_role_arn = aws_iam_role.ecs-task-exec.arn
@@ -153,6 +167,60 @@ resource "aws_lambda_function" "runEcsTask" {
     Name        = "Run ECS task function"
     Environment = "Dev"
   }
+}
+
+resource "aws_cloudwatch_log_group" "runEcsTaskLogGroup" {
+  name              = "/aws/lambda/${aws_lambda_function.runEcsTask.function_name}"
+  retention_in_days = 90
+
+  tags = {
+    Application = "runEcsTask lambda"
+    Environment = "Dev"
+  }
+}
+
+resource "aws_lambda_permission" "cloudwatch_runEcsTask_allow" {
+  statement_id  = "cloudwatch_runEcsTask_allow"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.cwl_stream_lambda.function_name
+  principal     = "logs.eu-central-1.amazonaws.com"
+  source_arn    = "${aws_cloudwatch_log_group.runEcsTaskLogGroup.arn}:*"
+}
+
+resource "aws_cloudwatch_log_subscription_filter" "runEcsTask_logfilter" {
+  name            = "runEcsTask_logsubscription"
+  log_group_name  = aws_cloudwatch_log_group.runEcsTaskLogGroup.name
+  filter_pattern  = ""
+  destination_arn = aws_lambda_function.cwl_stream_lambda.arn
+
+  depends_on = [aws_lambda_permission.cloudwatch_runEcsTask_allow]
+}
+
+resource "aws_cloudwatch_log_group" "ECSLogGroup" {
+  name              = "/aws/ecs/${aws_ecr_repository.lcs.name}"
+  retention_in_days = 90
+
+  tags = {
+    Application = "ECS Cluster"
+    Environment = "Dev"
+  }
+}
+
+resource "aws_lambda_permission" "cloudwatch_ecs_allow" {
+  statement_id  = "cloudwatch_ecs_allow"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.cwl_stream_lambda.function_name
+  principal     = "logs.eu-central-1.amazonaws.com"
+  source_arn    = "${aws_cloudwatch_log_group.ECSLogGroup.arn}:*"
+}
+
+resource "aws_cloudwatch_log_subscription_filter" "ecs_logfilter" {
+  name            = "ecs_logsubscription"
+  log_group_name  = aws_cloudwatch_log_group.ECSLogGroup.name
+  filter_pattern  = ""
+  destination_arn = aws_lambda_function.cwl_stream_lambda.arn
+
+  depends_on = [aws_lambda_permission.cloudwatch_ecs_allow]
 }
 
 # Trigger SQS to RunEcs Lambda

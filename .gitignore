@@ -172,3 +172,20 @@ terraform.rc
 
 zip/
 url.json
+
+# LATEX
+## Core latex/pdflatex auxiliary files:
+*.aux
+*.lof
+*.log
+*.lot
+*.fls
+*.out
+*.toc
+*.fmt
+*.fot
+*.cb
+*.cb2
+.*.lb
+*.pdf
+*.gz

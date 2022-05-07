@@ -7,9 +7,9 @@
         "logConfiguration": {
             "logDriver": "awslogs",
             "options": {
-                "awslogs-group": "/aws/ecs/myapp",
+                "awslogs-group": "${logGroup}",
                 "awslogs-region": "eu-central-1",
-                "awslogs-stream-prefix": ""
+                "awslogs-stream-prefix": "stream"
             }
         }
     }
