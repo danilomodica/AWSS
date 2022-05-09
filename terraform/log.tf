@@ -127,8 +127,9 @@ resource "aws_cloudwatch_metric_alarm" "lambdaLog_alarm" {
   metric_name               = "Errors"
   namespace                 = "AWS/Lambda"
   period                    = "300"
-  statistic                 = "SampleCount"
+  statistic                 = "Sum"
   threshold                 = "5"
+  treat_missing_data        = "notBreaching"
   insufficient_data_actions = []
   alarm_description         = "Send an alarm if logs are not streamed correctly to OpenSearch"
   alarm_actions             = [aws_sns_topic.notify.arn]

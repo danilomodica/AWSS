@@ -248,6 +248,7 @@ resource "aws_cloudwatch_metric_alarm" "sendMailDLQ_alarm" {
   period                    = "3600"
   statistic                 = "Minimum"
   threshold                 = "0"
+  treat_missing_data        = "notBreaching"
   insufficient_data_actions = []
   alarm_description         = "Send an alarm if emails are not sent correctly by lambda sendMail"
   alarm_actions             = [aws_sns_topic.notify.arn]
@@ -264,6 +265,7 @@ resource "aws_cloudwatch_metric_alarm" "FifoDLQ_alarm" {
   period                    = "3600"
   statistic                 = "Minimum"
   threshold                 = "0"
+  treat_missing_data        = "notBreaching"
   insufficient_data_actions = []
   alarm_description         = "Send an alarm if messages are not processed by the cluster"
   alarm_actions             = [aws_sns_topic.notify.arn]
