@@ -14,15 +14,6 @@ resource "aws_ecr_repository" "lcs" {
   image_scanning_configuration {
     scan_on_push = true
   }
-
-  provisioner "local-exec" { //TEMPORARY
-    command = <<EOT
-      "docker build -t container ../container/"
-      "docker login -u AWS -p $(aws ecr get-login-password --region eu-central-1) 389487414326.dkr.ecr.eu-central-1.amazonaws.com"
-      "docker tag container 389487414326.dkr.ecr.eu-central-1.amazonaws.com/lcs"
-      "docker push 389487414326.dkr.ecr.eu-central-1.amazonaws.com/lcs"
-    EOT
-  }
 }
 
 /* Role for ECS task definition */
