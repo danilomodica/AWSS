@@ -243,11 +243,11 @@ resource "aws_cloudwatch_metric_alarm" "sendMailDLQ_alarm" {
   alarm_name                = "sendMailDQL_alarm"
   comparison_operator       = "GreaterThanThreshold"
   evaluation_periods        = "5"
-  metric_name               = "NumberOfMessagesReceived"
+  metric_name               = "ApproximateNumberOfMessagesVisible"
   namespace                 = "AWS/SQS"
-  period                    = "900"
-  statistic                 = "SampleCount"
-  threshold                 = "3"
+  period                    = "3600"
+  statistic                 = "Minimum"
+  threshold                 = "0"
   insufficient_data_actions = []
   alarm_description         = "Send an alarm if emails are not sent correctly by lambda sendMail"
   alarm_actions             = [aws_sns_topic.notify.arn]
@@ -259,13 +259,13 @@ resource "aws_cloudwatch_metric_alarm" "FifoDLQ_alarm" {
   alarm_name                = "fifoDQL_alarm"
   comparison_operator       = "GreaterThanThreshold"
   evaluation_periods        = "5"
-  metric_name               = "NumberOfMessagesReceived"
+  metric_name               = "ApproximateNumberOfMessagesVisible"
   namespace                 = "AWS/SQS"
-  period                    = "900"
-  statistic                 = "SampleCount"
-  threshold                 = "3"
+  period                    = "3600"
+  statistic                 = "Minimum"
+  threshold                 = "0"
   insufficient_data_actions = []
-  alarm_description         = "Send an alarm if too much messages are sent to dlq"
+  alarm_description         = "Send an alarm if messages are not processed by the cluster"
   alarm_actions             = [aws_sns_topic.notify.arn]
 
   dimensions = { QueueName = "${aws_sqs_queue.inputFIFOQueue_Deadletter.name}" }

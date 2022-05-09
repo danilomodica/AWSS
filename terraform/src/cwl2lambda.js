@@ -14,7 +14,7 @@ var endpoint = ENV.es_endpoint;
 
 exports.handler = function(input, context) {
     // decode input from base64
-    var zippedInput = new Buffer(input.awslogs.data, 'base64');
+    var zippedInput = Buffer.from(input.awslogs.data, 'base64');
 
     // decompress the input
     zlib.gunzip(zippedInput, function(error, buffer) {
@@ -68,10 +68,10 @@ function transform(payload) {
 
         // index name format: cwl-YYYY.MM.DD
         var indexName = [
-            'cwl-' + timestamp.getUTCFullYear(),              // year
-            ('0' + (timestamp.getUTCMonth() + 1)).slice(-2),  // month
-            ('0' + timestamp.getUTCDate()).slice(-2)          // day
-        ].join('.');
+            'cwl-' + payload.logGroup.toLowerCase().split('/').join('-') + '-' + timestamp.getUTCFullYear(),
+            ('0' + (timestamp.getUTCMonth() + 1)).slice(-2),
+            ('0' + timestamp.getUTCDate()).slice(-2) 
+            ].join('.');
 
         var source = buildSource(logEvent.message, logEvent.extractedFields);
         source['@id'] = logEvent.id;

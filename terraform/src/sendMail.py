@@ -4,6 +4,7 @@ import smtplib
 from email.message import EmailMessage
 
 
+
 def lambda_handler(event, context):
     json_output = {
         'statusCode': 200,
@@ -11,15 +12,17 @@ def lambda_handler(event, context):
     }
 
     for record in event['Records']:
-        msg = str(record["body"]).split()
+        msg = str(record["body"]).split("-")
 
         job_id = msg[0]
         user_mail = msg[1]
         message_type = int(msg[2])
         if message_type == 0:
             message_error = msg[3]
-
-        res = send_email(user_mail, job_id, message_type, message_error)
+            res = send_email(user_mail, job_id, message_type, message_error)
+        else:
+            res = send_email(user_mail, job_id, message_type, "")
+    
         if res is not True:
             json_output = {
                 'statusCode': 500,
@@ -27,7 +30,6 @@ def lambda_handler(event, context):
             }
             
     return json_output
-
 
 def send_email(user_mail, job_id, message_type, message_error):
     gmail_user = 'awss.unipv@gmail.com'
