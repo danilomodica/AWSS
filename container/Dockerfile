@@ -1,10 +1,11 @@
-FROM python:3-alpine
+FROM ubuntu:latest
 WORKDIR /app
 COPY ./data ./
 ENV DEBIAN_FRONTEND noninteractive
-RUN apk update && \
-    apk add --no-cache gcc libc-dev
+RUN apt update && \
+    apt -y install gcc mono-mcs python3 pip && \
+    rm -rf /var/lib/apt/lists/*
 RUN gcc -O2 -fopenmp lcs_algorithm.c -o lcs
 RUN pip install boto3
-CMD ["python3", "run.py"]
+CMD ["python3","run.py"]
 
