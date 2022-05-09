@@ -1,6 +1,6 @@
 [
     {
-        "name": "myapp",
+        "name": "${name}",
         "image": "${repo}",
         "cpu": 0,
         "essential": true,

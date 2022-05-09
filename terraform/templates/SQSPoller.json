@@ -6,10 +6,9 @@
             "Action": [
                 "sqs:DeleteMessage",
                 "sqs:GetQueueAttributes",
-                "sqs:ReceiveMessage",
-                "sqs:SendMessage"
+                "sqs:ReceiveMessage"
             ],
-            "Resource": "arn:aws:sqs:*"
+            "Resource": "arn:aws:sqs:*:*:${queue_name}"
         }
     ]
     }

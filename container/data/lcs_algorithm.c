@@ -79,16 +79,14 @@ void preproc_string(int n, int *tondo, int block_size, char *str, int par) {
 
 	if (n % block_size == 0) {
 		tondo[0] = n;
-	}
-	else {
+	}else {
 		tondo[0] = block_size * (n / block_size + 1);
 	}
 
 	for (i = n; i < tondo[0]; i++) {
 		if (par == 1) {
 			str[i] = '1';
-		}
-		else {
+		}else {
 			str[i] = '2';
 		}
 	}
@@ -105,7 +103,7 @@ int main (int argc, char *argv[]) {
 	}
 
 	if ((fin1 = fopen(argv[1], "r")) == NULL || (fin2 = fopen(argv[2], "r")) == NULL) {
-		printf("\033[31;1m Error opening file1 or file2! \033[0m\n");
+		printf("\033[31;1m Error in opening file1 or file2! \033[0m\n");
 		return -1;
 	}
 	block_size = atoi(argv[3]);
@@ -116,11 +114,12 @@ int main (int argc, char *argv[]) {
 	preproc_string((int)strlen(a), &n_tondo, block_size, a, 1);
 	preproc_string((int)strlen(b), &m_tondo, block_size, b, 2);
     
-	omp_set_num_threads(24);
-
     s=lcs(a, n_tondo, b, m_tondo, s, block_size);
 
-	result = fopen(argv[4], "w");
+	if ((result = fopen(argv[4], "w")) == NULL) {
+		printf("\033[31;1m Error in opening result file! \033[0m\n");
+		return -1;
+	}
 	fprintf(result, "%s", s);
 
 	free(a);
@@ -130,5 +129,6 @@ int main (int argc, char *argv[]) {
 	fclose(fin1);
 	fclose(fin2);
 	fclose(result);
+
 	return 0;
 }

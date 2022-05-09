@@ -1,4 +1,4 @@
-resource "aws_elasticsearch_domain" "AWSSElasticsearch" {
+resource "aws_elasticsearch_domain" "AWSSOpenSearch" {
   domain_name           = "awss-logs"
   elasticsearch_version = "OpenSearch_1.2"
 
@@ -60,20 +60,22 @@ resource "aws_elasticsearch_domain" "AWSSElasticsearch" {
     }
   }
 
-  access_policies = templatefile("./templates/openSearchPolicy.json", {})
+  access_policies = templatefile("./templates/OwnerStatement.json", { aws_principal = "*", action = "es:*", resource_arn = "arn:aws:es:*:*:domain/awss-logs/*" }) //arn cannot be computer prior
 
   provisioner "local-exec" {
-    command = "curl -X PUT -u '${var.masterName}:${var.masterPass}' -H 'Content-Type:application/json' 'https://${aws_elasticsearch_domain.AWSSElasticsearch.endpoint}/_plugins/_security/api/rolesmapping/all_access' -d '{\"backend_roles\" : [\"${aws_iam_role.lambda_opensearch_execution_role.arn}\"],\"hosts\" : [],\"users\" : [\"${var.masterName}\",\"${data.aws_caller_identity.current.arn}\"]}'"
+    command = "curl -X PUT -u '${var.masterName}:${var.masterPass}' -H 'Content-Type:application/json' 'https://${aws_elasticsearch_domain.AWSSOpenSearch.endpoint}/_plugins/_security/api/rolesmapping/all_access' -d '{\"backend_roles\" : [\"${aws_iam_role.lambda_opensearch_execution_role.arn}\"],\"hosts\" : [],\"users\" : [\"${var.masterName}\",\"${data.aws_caller_identity.current.arn}\"]}'"
   }
 
   tags = {
     Name        = "OpenSearch AWSS Domain"
     Environment = "Dev"
   }
+
+  depends_on = [data.aws_caller_identity.current]
 }
 
 output "OpenSearch_Dashboard" {
-  value = "https://${aws_elasticsearch_domain.AWSSElasticsearch.endpoint}/_dashboards"
+  value = "https://${aws_elasticsearch_domain.AWSSOpenSearch.endpoint}/_dashboards"
 }
 
 #Lambda that streams log data to opensearch (it is the standard one but uses env variable to point the correct kibana endpoint)
@@ -95,7 +97,7 @@ resource "aws_lambda_function" "cwl_stream_lambda" {
 
   environment {
     variables = {
-      es_endpoint = aws_elasticsearch_domain.AWSSElasticsearch.endpoint
+      es_endpoint = aws_elasticsearch_domain.AWSSOpenSearch.endpoint
     }
   }
 
@@ -138,7 +140,7 @@ resource "aws_iam_role" "lambda_opensearch_execution_role" {
   name        = "lambda_opensearch_execution_role"
   description = "IAM Role for lambda used to stream to OpenSearch"
 
-  assume_role_policy = templatefile("./templates/lambdaRolePolicy.json", {})
+  assume_role_policy = templatefile("./templates/LambdaRole.json", {})
 }
 
 resource "aws_iam_policy" "ESHTTPPolicy" {
@@ -146,12 +148,12 @@ resource "aws_iam_policy" "ESHTTPPolicy" {
   description = "Allow to send log data using http post request to opensearch"
   path        = "/"
 
-  policy = templatefile("./templates/ESHttpPolicy.json", {})
+  policy = templatefile("./templates/OSHttpPolicy.json", {})
 }
 
 resource "aws_iam_role_policy_attachment" "OSLogs1" {
   role       = aws_iam_role.lambda_opensearch_execution_role.name
-  policy_arn = aws_iam_policy.lambdaLogging.arn
+  policy_arn = aws_iam_policy.cwlogging.arn
 }
 
 resource "aws_iam_role_policy_attachment" "OSLogs2" {

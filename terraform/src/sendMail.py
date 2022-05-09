@@ -39,7 +39,7 @@ def send_email(user_mail, job_id, message_type):
                     ", has been successfully completed, go to the AWSS website to download the result"
     elif message_type == 0:
         sent_subject = "Your job has not been completed"
-        sent_body = "Unfortunately the job, with id " + str(job_id) + ", failed."
+        sent_body = "Unfortunately the job, with id " + str(job_id) + ", failed.\n"+str(msg[3])
     else:
         return "Wrong message type\n"
 
