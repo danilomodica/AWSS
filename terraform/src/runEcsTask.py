@@ -1,7 +1,7 @@
 import json
 import boto3
 import sys
-import random
+import uuid
 import os
 
 
@@ -10,13 +10,11 @@ def lambda_handler(event, context):
         
     for record in event['Records']:
         print(record, file=sys.stderr)
-        msg = str(record["body"]).split('-')
+        msg = str(record["body"]).split('#')
         
         path1= msg[0]
         path2 = msg[1]
         email = msg[2]
-        
-        rand = random.randint(1000, 10**6)
 
         FARGATE_CLUSTER = os.environ['cluster']
         REGION = os.environ['region']
@@ -66,7 +64,7 @@ def lambda_handler(event, context):
                             },
                             {
                                 "name": "result_file",
-                                "value": str(rand)+".txt"
+                                "value": str(uuid.uuid4())+".txt"
                             },
                             {
                                 "name": "email",

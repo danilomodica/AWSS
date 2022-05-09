@@ -12,7 +12,7 @@ def lambda_handler(event, context):
     }
 
     for record in event['Records']:
-        msg = str(record["body"]).split("-")
+        msg = str(record["body"]).split("#")
 
         job_id = msg[0]
         user_mail = msg[1]

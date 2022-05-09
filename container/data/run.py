@@ -40,7 +40,7 @@ try:
     textfile2 = open("myfile2.txt", 'r')
 
     if(check_string(textfile1) == False or check_string(textfile2) == False):
-        MSG_BODY = f'{id}-{data["email"]}-0-ERROR: Recheck the string you have inserted'
+        MSG_BODY = f'{id}#{data["email"]}#0#ERROR: Recheck the string you have inserted'
         textfile1.close()
         textfile2.close()
     else:
@@ -54,16 +54,16 @@ try:
                 txt_data = f.read()
                 object = s3.Object(data["bucket_out"], data["result_file"])
                 object.put(Body=txt_data)
-            MSG_BODY = f'{id}-{data["email"]}-1'
+            MSG_BODY = f'{id}#{data["email"]}#1'
             print("SUCCESS: Result has been stored")	
         else:
             print(check)
-            MSG_BODY = f'{id}-{data["email"]}-0-ERROR: Something went wrong during execution. Please contact us.'
+            MSG_BODY = f'{id}#{data["email"]}#0#ERROR: Something went wrong during execution. Please contact us.'
 except TimeOutException:
     os.killpg(os.getpgid(check.pid), signal.SIGTERM)
-    MSG_BODY = f'{id}-{data["email"]}-0-ERROR: Timeout'
+    MSG_BODY = f'{id}#{data["email"]}#0#ERROR: Timeout'
 except Exception as e:
     print(e)
-    MSG_BODY = f'{id}-{data["email"]}-0-ERROR: Generic error'
+    MSG_BODY = f'{id}#{data["email"]}#0#ERROR: Generic error'
 
 sqs_client.send_message(QueueUrl=QUEUE_URL, MessageAttributes=MSG_ATTRIBUTES, MessageBody=MSG_BODY)

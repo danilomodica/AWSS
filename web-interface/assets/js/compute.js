@@ -13,12 +13,12 @@ document.getElementById("compute").addEventListener('click', function() {
 
 	/* Files Management */
 	var file1 = document.getElementById("file1ToUpload");
-	var filename1 = file1.value.replace(/^.*[\\\/]/, '').split('.')[0] + Math.floor(Math.random() * 100000) + '.txt';
+	var filename1 = uuidv4() + '.txt';
 	var s3Url1;
 	var url1 = api_url + '/' + bucket + '?filename=' + filename1
 
 	var file2 = document.getElementById("file2ToUpload");
-	var filename2 = file2.value.replace(/^.*[\\\/]/, '').split('.')[0] + Math.floor(Math.random() * 100000) + '.txt';
+	var filename2 = uuidv4() + '.txt';
 	var s3Url2;
 	var url2 = api_url + '/' + bucket + '?filename=' + filename2 
 
@@ -97,7 +97,7 @@ document.getElementById("compute").addEventListener('click', function() {
 													}
 													else {
 														/* Adding message to SQS queue */
-														var message = filename1 + '-' + filename2 + '-' + email;
+														var message = filename1 + '#' + filename2 + '#' + email;
 														var url3 = api_url + '/sqs';
 
 														fetch(url3, {
@@ -120,10 +120,10 @@ document.getElementById("compute").addEventListener('click', function() {
 																	title: 'Your files have been uploaded!',
 																	text: 'You will soon receive an email with the result',
 																	confirmButtonColor: '#4154f1'
-																},
-																function(){ 
+																}).then((result) => {
+																	// Reload the Page
 																	location.reload();
-																});
+																  });
 															}
 														})
 														.catch((error) => {
