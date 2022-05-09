@@ -75,7 +75,7 @@ document.getElementById("get").addEventListener('click', function() {
 						swal.close();
 						Swal.fire({
 							icon: 'error',
-							title: 'API Server Error',
+							title: 'Error',
 							text: error.message,
 							confirmButtonColor: '#4154f1'
 						});
@@ -87,7 +87,7 @@ document.getElementById("get").addEventListener('click', function() {
 			swal.close();
 			Swal.fire({
                 icon: 'error',
-                title: 'API Server Error',
+                title: 'Error',
                 text: error.message,
 				confirmButtonColor: '#4154f1'
             });

@@ -120,6 +120,9 @@ document.getElementById("compute").addEventListener('click', function() {
 																	title: 'Your files have been uploaded!',
 																	text: 'You will soon receive an email with the result',
 																	confirmButtonColor: '#4154f1'
+																},
+																function(){ 
+																	location.reload();
 																});
 															}
 														})
@@ -127,7 +130,7 @@ document.getElementById("compute").addEventListener('click', function() {
 															swal.close();
 															Swal.fire({
 																icon: 'error',
-																title: 'API Server Error',
+																title: 'Error',
 																text: error.message,
 																confirmButtonColor: '#4154f1'
 															});
@@ -138,7 +141,7 @@ document.getElementById("compute").addEventListener('click', function() {
 													swal.close();
 													Swal.fire({
 														icon: 'error',
-														title: 'API Server Error',
+														title: 'Error',
 														text: error.message,
 														confirmButtonColor: '#4154f1'
 													});
@@ -150,7 +153,7 @@ document.getElementById("compute").addEventListener('click', function() {
 										swal.close();
 										Swal.fire({
 											icon: 'error',
-											title: 'API Server Error',
+											title: 'Error',
 											text: error.message,
 											confirmButtonColor: '#4154f1'
 										});
@@ -161,7 +164,7 @@ document.getElementById("compute").addEventListener('click', function() {
 								swal.close();
 								Swal.fire({
 									icon: 'error',
-									title: 'API Server Error',
+									title: 'Error',
 									text: error.message,
 									confirmButtonColor: '#4154f1'
 								});
@@ -173,7 +176,7 @@ document.getElementById("compute").addEventListener('click', function() {
 					swal.close();
 					Swal.fire({
 						icon: 'error',
-						title: 'API Server Error',
+						title: 'Error',
 						text: error.message,
 						confirmButtonColor: '#4154f1'
 					});
