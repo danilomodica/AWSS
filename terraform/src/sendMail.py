@@ -16,8 +16,10 @@ def lambda_handler(event, context):
         job_id = msg[0]
         user_mail = msg[1]
         message_type = int(msg[2])
+        if message_type == 0:
+            message_error = msg[3]
 
-        res = send_email(user_mail, job_id, message_type)
+        res = send_email(user_mail, job_id, message_type, message_error)
         if res is not True:
             json_output = {
                 'statusCode': 500,
@@ -27,7 +29,7 @@ def lambda_handler(event, context):
     return json_output
 
 
-def send_email(user_mail, job_id, message_type):
+def send_email(user_mail, job_id, message_type, message_error):
     gmail_user = 'awss.unipv@gmail.com'
     gmail_app_password = os.environ['psw_gmail']
     sent_from = gmail_user
@@ -39,7 +41,7 @@ def send_email(user_mail, job_id, message_type):
                     ", has been successfully completed, go to the AWSS website to download the result"
     elif message_type == 0:
         sent_subject = "Your job has not been completed"
-        sent_body = "Unfortunately the job, with id " + str(job_id) + ", failed.\n"+str(msg[3])
+        sent_body = "Unfortunately the job, with id " + str(job_id) + ", failed.\n" + message_error
     else:
         return "Wrong message type\n"
 
