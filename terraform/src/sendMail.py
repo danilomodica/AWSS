@@ -6,32 +6,24 @@ from email.message import EmailMessage
 
 
 def lambda_handler(event, context):
-    json_output = {
-        'statusCode': 200,
-        'body': json.dumps('Mail sent')
-    }
-
     for record in event['Records']:
-        msg = str(record["body"]).split("#")
-
-        job_id = msg[0]
-        user_mail = msg[1]
-        message_type = int(msg[2])
-        if message_type == 0:
-            message_error = msg[3]
-            res = send_email(user_mail, job_id, message_type, message_error)
-        else:
-            res = send_email(user_mail, job_id, message_type, "")
+        json_output = {
+            'statusCode': 200,
+            'body': json.dumps('Mail sent')
+        }
     
+        msg = json.loads(record["body"])
+        res = send_email(msg["mail"], msg["job_id"], int(msg["message_type"]), msg["error_msg"])
+
         if res is not True:
             json_output = {
                 'statusCode': 500,
                 'body': json.dumps(res)
             }
             
-    return json_output
+        print(json_output)
 
-def send_email(user_mail, job_id, message_type, message_error):
+def send_email(user_mail, job_id, message_type, error_msg):
     gmail_user = 'awss.unipv@gmail.com'
     gmail_app_password = os.environ['psw_gmail']
     sent_from = gmail_user
@@ -43,7 +35,7 @@ def send_email(user_mail, job_id, message_type, message_error):
                     ", has been successfully completed, go to the AWSS website to download the result"
     elif message_type == 0:
         sent_subject = "Your job has not been completed"
-        sent_body = "Unfortunately the job, with id " + str(job_id) + ", failed.\n" + message_error
+        sent_body = "Unfortunately the job, with id " + str(job_id) + ", failed.\n" + error_msg
     else:
         return "Wrong message type\n"
 
@@ -59,4 +51,5 @@ def send_email(user_mail, job_id, message_type, message_error):
             session.send_message(msg)
         return True
     except Exception as e:
-        return f"Error: {e}!"
+        print(e)
+        return False

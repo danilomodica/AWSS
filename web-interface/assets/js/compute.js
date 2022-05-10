@@ -97,7 +97,7 @@ document.getElementById("compute").addEventListener('click', function() {
 													}
 													else {
 														/* Adding message to SQS queue */
-														var message = filename1 + '#' + filename2 + '#' + email;
+														var message = "{\"path1\":\""+filename1+"\",\"path2\":\""+filename2+"\",\"email\":\""+email+"\"}";
 														var url3 = api_url + '/sqs';
 
 														fetch(url3, {

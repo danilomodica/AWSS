@@ -5,16 +5,9 @@ import uuid
 import os
 
 
-def lambda_handler(event, context):
-    print(event, file=sys.stderr)
-        
+def lambda_handler(event, context):        
     for record in event['Records']:
-        print(record, file=sys.stderr)
-        msg = str(record["body"]).split('#')
-        
-        path1= msg[0]
-        path2 = msg[1]
-        email = msg[2]
+        msg = json.loads(record["body"])
 
         FARGATE_CLUSTER = os.environ['cluster']
         REGION = os.environ['region']
@@ -52,11 +45,11 @@ def lambda_handler(event, context):
                             },
                                                     {
                                 "name": 'file1',
-                                "value": path1
+                                "value": msg["path1"]
                             },
                                                     {
                                 "name": 'file2',
-                                "value": path2
+                                "value": msg["path2"]
                             },
                                                     {
                                 "name": 'bucket_out',
@@ -68,7 +61,7 @@ def lambda_handler(event, context):
                             },
                             {
                                 "name": "email",
-                                "value": email
+                                "value": msg["email"]
                             },
                             {
                                 "name": "queue_url",
@@ -79,8 +72,8 @@ def lambda_handler(event, context):
                 ],
             },
         )
-    
-    return {
-        'statusCode': 200,
-        'response': str(response),
-    }
+        json_output = {
+            'attachments_status': response["tasks"][0]["attachments"][0]["status"],
+            'container_status': response["tasks"][0]["containers"][0]["lastStatus"]
+        }
+        print (json_output)

@@ -28,6 +28,8 @@ sqs_client = boto3.client("sqs", region_name=AWS_REGION)
 id = data["result_file"].split(".")[0]
 QUEUE_URL = data["queue_url"]
 MSG_ATTRIBUTES = {}
+msg = ""
+msg_type = 1
 
 signal.signal(signal.SIGALRM, timeout_handler)
 signal.alarm(86400) #max execution time 24h
@@ -40,7 +42,9 @@ try:
     textfile2 = open("myfile2.txt", 'r')
 
     if(check_string(textfile1) == False or check_string(textfile2) == False):
-        MSG_BODY = f'{id}#{data["email"]}#0#ERROR: Recheck the string you have inserted'
+        msg = "ERROR: Wrong file content"
+        msg_type = 0
+        print(msg)
         textfile1.close()
         textfile2.close()
     else:
@@ -54,16 +58,21 @@ try:
                 txt_data = f.read()
                 object = s3.Object(data["bucket_out"], data["result_file"])
                 object.put(Body=txt_data)
-            MSG_BODY = f'{id}#{data["email"]}#1'
             print("SUCCESS: Result has been stored")	
         else:
             print(check)
-            MSG_BODY = f'{id}#{data["email"]}#0#ERROR: Something went wrong during execution. Please contact us.'
+            msg_type = 0
+            msg = "ERROR: Something went wrong during execution. Please contact us"
 except TimeOutException:
+    msg = "ERROR: Timeout"
+    msg_type = 0
+    print(msg)
     os.killpg(os.getpgid(check.pid), signal.SIGTERM)
-    MSG_BODY = f'{id}#{data["email"]}#0#ERROR: Timeout'
-except Exception as e:
-    print(e)
-    MSG_BODY = f'{id}#{data["email"]}#0#ERROR: Generic error'
+except Exception as err:
+    print(err)
+    msg_type = 0
+    msg = "ERROR: Generic error"
 
+
+MSG_BODY = "{\"job_id\":\""+id+"\",\"mail\":\""+data["email"]+"\",\"message_type\":\""+str(msg_type)+"\",\"error_msg\":\""+msg+"\"}"
 sqs_client.send_message(QueueUrl=QUEUE_URL, MessageAttributes=MSG_ATTRIBUTES, MessageBody=MSG_BODY)
