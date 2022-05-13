@@ -10,7 +10,7 @@ char* readFile(FILE *fin, char *txt, int block_size) {
 	fseek(fin, 0L, SEEK_END);
 	int sz = ftell(fin);
 
-	txt = (char*)malloc(sz * sizeof(char));
+	txt = (char*)malloc((sz+1) * sizeof(char));
 	fseek(fin, 0L, SEEK_SET);
 
 	(void)fscanf(fin, "%s", txt);
