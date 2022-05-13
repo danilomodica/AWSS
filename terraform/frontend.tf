@@ -38,9 +38,9 @@ resource "aws_s3_bucket_website_configuration" "www_bucketWebConfig" {
     suffix = "index.html"
   }
 
-  /*error_document {
+  error_document {
     key = "error.html"
-  }*/
+  }
 }
 
 resource "aws_s3_bucket_cors_configuration" "www_bucketCORS" {
@@ -94,12 +94,12 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
   is_ipv6_enabled     = true
   default_root_object = "index.html"
 
-  /*custom_error_response {
+  custom_error_response {
     error_caching_min_ttl = 0
     error_code = 404
     response_code = 200
-    response_page_path = "/404.html"
-  }*/
+    response_page_path = "/error.html"
+  }
 
   aliases = [var.website_url]
 
