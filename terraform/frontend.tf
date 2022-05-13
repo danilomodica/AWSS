@@ -107,7 +107,7 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
     response_page_path = "/error.html"
   }
 
-  aliases = [var.website_url]
+  aliases = [var.website_url, "www.${var.website_url}"]
 
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD"]
@@ -189,12 +189,20 @@ resource "aws_route53_record" "www" {
   records = [var.website_url]
 }
 
-resource "aws_route53_record" "certificateCNAME" { #For certificate
+resource "aws_route53_record" "certificateCNAME1" { # For certificate 1
   zone_id = aws_route53_zone.route53_zone.zone_id
-  name    = "${var.certificate_cname}.${var.website_url}"
+  name    = "${var.certificate_cname1}.${var.website_url}"
   type    = "CNAME"
   ttl     = "300" #3600
-  records = ["${var.certificate_dns_record}"]
+  records = ["${var.certificate_dns_record1}"]
+}
+
+resource "aws_route53_record" "certificateCNAME2" { # For certificate 2
+  zone_id = aws_route53_zone.route53_zone.zone_id
+  name    = "${var.certificate_cname2}.www.${var.website_url}"
+  type    = "CNAME"
+  ttl     = "300" #3600
+  records = ["${var.certificate_dns_record2}"]
 }
 
 output "Route53_Nameservers" {
