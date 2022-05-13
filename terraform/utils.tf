@@ -9,6 +9,11 @@ resource "aws_s3_bucket" "AWSSInputFiles" {
   }
 }
 
+resource "aws_s3_bucket_accelerate_configuration" "accelerateInputs" {
+  bucket = aws_s3_bucket.AWSSInputFiles.bucket
+  status = "Enabled"
+}
+
 resource "aws_s3_bucket_acl" "aclInputs" {
   bucket = aws_s3_bucket.AWSSInputFiles.id
   acl    = "private"
@@ -60,6 +65,11 @@ resource "aws_s3_bucket" "AWSSResultFiles" {
     Name        = "Result files bucket"
     Environment = "Dev"
   }
+}
+
+resource "aws_s3_bucket_accelerate_configuration" "accelerateResults" {
+  bucket = aws_s3_bucket.AWSSResultFiles.bucket
+  status = "Enabled"
 }
 
 resource "aws_s3_bucket_acl" "aclResults" {
