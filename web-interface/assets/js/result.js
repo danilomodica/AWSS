@@ -44,7 +44,7 @@ document.getElementById("get").addEventListener('click', function() {
 					fetch(s3Url.URL, {
 						method: 'GET'
 					})
-					.then(response => {			
+					.then(response => {
 						if (!response.ok) {
 							swal.close();
 							Swal.fire({
@@ -59,7 +59,7 @@ document.getElementById("get").addEventListener('click', function() {
 								/* File Downloading */
 								var element = document.createElement('a');
 								element.setAttribute('href', 'data:application/octet-stream;charset=utf-8,' + encodeURIComponent(text));
-								element.setAttribute('download', 'result.txt');
+								element.setAttribute('download', filename);
 
 								element.style.display = 'none';
 								document.body.appendChild(element);
