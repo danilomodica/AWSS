@@ -6,7 +6,7 @@ import json
 
 def lambda_handler(event, context):
     # Get the service client.
-    s3 = boto3.client('s3', config=Config(s3={'addressing_style': 'path'}, signature_version='s3v4'))
+    s3 = boto3.client('s3', config=Config(s3={'addressing_style': 'path', 'use_accelerate_endpoint': True}, signature_version='s3v4'))
 
     # Get Parameters
     bucket = event["pathParameters"]["bucket"]
