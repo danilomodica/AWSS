@@ -341,6 +341,7 @@ section {
 }
 .navbar-mobile .getstarted, .navbar-mobile .getstarted:focus {
   margin: 15px;
+  color: #fff;
 }
 .navbar-mobile .dropdown ul {
   position: static;
