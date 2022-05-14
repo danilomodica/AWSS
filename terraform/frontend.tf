@@ -12,18 +12,7 @@ resource "aws_s3_bucket" "www_bucket" {
 
 resource "aws_s3_bucket_policy" "www_bucketPolicy" {
   bucket = aws_s3_bucket.www_bucket.id
-  policy = jsonencode(
-    {
-      "Version" : "2012-10-17",
-      "Statement" : [
-        {
-          "Effect" : "Allow",
-          "Principal" : "*",
-          "Action" : "s3:GetObject",
-          "Resource" : "${aws_s3_bucket.www_bucket.arn}/*"
-        }
-      ]
-  })
+  policy =   templatefile("./templates/OwnerStatement.json", { aws_principal = "${aws_cloudfront_origin_access_identity.CFOAI.iam_arn}", action = "s3:GetObject", resource_arn = "${aws_s3_bucket.www_bucket.arn}/*" })
 }
 
 resource "aws_s3_bucket_acl" "www_acl" {
@@ -77,19 +66,24 @@ resource "aws_s3_object" "website_json_file" { //upload json file with api invok
 }
 
 # CLOUDFRONT
+resource "aws_cloudfront_origin_access_identity" "CFOAI" {
+  comment = "S3 OAI"
+}
+
 resource "aws_cloudfront_distribution" "www_s3_distribution" {
   origin {
     domain_name = aws_s3_bucket.www_bucket.bucket_domain_name
     origin_id   = "S3-www.${var.bucket_name}"
 
-    custom_origin_config {
-      http_port              = "80"
-      https_port             = "443"
-      origin_protocol_policy = "http-only"
-      origin_ssl_protocols   = ["TLSv1", "TLSv1.1", "TLSv1.2"]
+    origin_shield {
+      enabled = true
+      origin_shield_region = "${var.region}"
+    }
+
+    s3_origin_config {
+      origin_access_identity = aws_cloudfront_origin_access_identity.CFOAI.cloudfront_access_identity_path
     }
   }
-
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
