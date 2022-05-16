@@ -12,12 +12,21 @@ resource "aws_s3_bucket" "www_bucket" {
 
 resource "aws_s3_bucket_policy" "www_bucketPolicy" {
   bucket = aws_s3_bucket.www_bucket.id
-  policy =   templatefile("./templates/OwnerStatement.json", { aws_principal = "${aws_cloudfront_origin_access_identity.CFOAI.iam_arn}", action = "s3:GetObject", resource_arn = "${aws_s3_bucket.www_bucket.arn}/*" })
+  policy = templatefile("./templates/OwnerStatement.json", { aws_principal = "${aws_cloudfront_origin_access_identity.CFOAI.iam_arn}", action = "s3:GetObject", resource_arn = "${aws_s3_bucket.www_bucket.arn}/*" })
 }
 
 resource "aws_s3_bucket_acl" "www_acl" {
   bucket = aws_s3_bucket.www_bucket.id
   acl    = "private"
+}
+
+resource "aws_s3_bucket_public_access_block" "wwwAccessBlock" {
+  bucket = aws_s3_bucket.www_bucket.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  restrict_public_buckets = true
+  ignore_public_acls      = true
 }
 
 resource "aws_s3_bucket_website_configuration" "www_bucketWebConfig" {
@@ -76,8 +85,8 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
     origin_id   = "S3-www.${var.bucket_name}"
 
     origin_shield {
-      enabled = true
-      origin_shield_region = "${var.region}"
+      enabled              = true
+      origin_shield_region = var.region
     }
 
     s3_origin_config {
@@ -90,15 +99,15 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
 
   custom_error_response {
     error_caching_min_ttl = 10
-    error_code = 404
-    response_code = 200
-    response_page_path = "/error.html"
+    error_code            = 404
+    response_code         = 200
+    response_page_path    = "/error.html"
   }
   custom_error_response {
     error_caching_min_ttl = 10
-    error_code = 403
-    response_code = 200
-    response_page_path = "/error.html"
+    error_code            = 403
+    response_code         = 200
+    response_page_path    = "/error.html"
   }
 
   aliases = [var.website_url, "www.${var.website_url}"]

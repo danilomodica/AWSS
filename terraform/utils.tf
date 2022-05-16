@@ -195,9 +195,9 @@ resource "aws_sqs_queue" "sendMailQueue" {
   delay_seconds              = 0
   visibility_timeout_seconds = 60
 
-    redrive_policy = jsonencode({
-      deadLetterTargetArn = aws_sqs_queue.sendMailQueue_deadLetter.arn
-      maxReceiveCount     = 2
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.sendMailQueue_deadLetter.arn
+    maxReceiveCount     = 2
   })
 
   tags = {

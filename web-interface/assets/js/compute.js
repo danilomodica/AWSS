@@ -23,7 +23,7 @@ document.getElementById("compute").addEventListener('click', function() {
 	var url2 = api_url + '/' + bucket + '?filename=' + filename2 
 
 	if (file1.files[0] != null && file2.files[0] != null) {
-		if ((file1.files[0].size * 1024 * file2.files[0].size * 1024) < 300647771072) { // 28 GB in byte
+		if ((file1.files[0].size * file2.files[0].size) < 30064771072) { // 28 GB in byte
 			if (file1.files[0].type == "text/plain" && file2.files[0].type == "text/plain") {
 				if (email != '' && email.toLowerCase().match(/^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/)) {
 					Swal.fire({
