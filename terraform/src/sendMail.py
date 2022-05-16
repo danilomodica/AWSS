@@ -13,17 +13,8 @@ def lambda_handler(event, context):
         }
         
         msg = json.loads(record["body"])
-        
-        try:
-            send_email(msg["mail"], msg["job_id"], int(msg["message_type"]), msg["error_msg"])
-        except Exception as e:
-            json_output = {
-                'statusCode': 500,
-                'body': json.dumps('Mail not sent. Generic error')
-            }
-            print(e)
-        finally:
-            print(json_output)
+        send_email(msg["mail"], msg["job_id"], int(msg["message_type"]), msg["error_msg"])
+        print(json_output) # if no problems happen
             
             
 def send_email(user_mail, job_id, message_type, error_msg):
@@ -34,11 +25,11 @@ def send_email(user_mail, job_id, message_type, error_msg):
 
     if message_type == 1:
         sent_subject = "AWSS - Your job has been successfully completed"
-        sent_body = "Your job, with id " + str(job_id) + \
+        sent_body = "Your job, with id " + job_id + \
                     ", has been successfully completed, go to the AWSS website to download the result"
     elif message_type == 0:
         sent_subject = "Your job has not been completed"
-        sent_body = "Unfortunately the job, with id " + str(job_id) + ", failed.\n" + error_msg
+        sent_body = "Unfortunately the job, with id " + job_id + ", failed.\n" + error_msg
     else:
         return "Wrong message type\n"
 

@@ -121,13 +121,13 @@ resource "aws_cloudwatch_log_group" "LogsToESLogGroup" {
 
 #Cloudwatch alarm in case there are errors using logs lambda
 resource "aws_cloudwatch_metric_alarm" "lambdaLog_alarm" {
-  alarm_name                = "Lambda_logs_alarm"
+  alarm_name                = "lambda_logs_alarm"
   comparison_operator       = "GreaterThanThreshold"
   evaluation_periods        = "3"
   metric_name               = "Errors"
   namespace                 = "AWS/Lambda"
   period                    = "300"
-  statistic                 = "Sum"
+  statistic                 = "Maximum"
   threshold                 = "5"
   treat_missing_data        = "notBreaching"
   insufficient_data_actions = []

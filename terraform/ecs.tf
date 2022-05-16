@@ -126,13 +126,6 @@ resource "aws_iam_policy" "SQSPollerPolicyFifo" {
   policy = templatefile("./templates/SQSPoller.json", { queue_name = "${aws_sqs_queue.inputFIFOQueue.name}" })
 }
 
-resource "aws_iam_policy" "SendtoFifoDLQPolicy" {
-  name        = "SendToFifoDLQ"
-  description = "Policy to allow sending to fifo dlq from ecs lambda"
-
-  policy = templatefile("./templates/SQSSend.json", { queue_name = "${aws_sqs_queue.inputFIFOQueue_Deadletter.name}" })
-}
-
 resource "aws_iam_role_policy_attachment" "ecs-lambda-role-policy-attachment1" {
   role       = aws_iam_role.run-ecs-task.name
   policy_arn = aws_iam_policy.ecs-lambda-policy.arn
@@ -141,11 +134,6 @@ resource "aws_iam_role_policy_attachment" "ecs-lambda-role-policy-attachment1" {
 resource "aws_iam_role_policy_attachment" "ecs-lambda-role-policy-attachment2" {
   role       = aws_iam_role.run-ecs-task.name
   policy_arn = aws_iam_policy.SQSPollerPolicyFifo.arn
-}
-
-resource "aws_iam_role_policy_attachment" "ecs-lambda-role-policy-attachment3" {
-  role       = aws_iam_role.run-ecs-task.name
-  policy_arn = aws_iam_policy.SendtoFifoDLQPolicy.arn
 }
 
 # Lambda function written in Python that runs a task into ECS cluster
@@ -186,6 +174,12 @@ resource "aws_lambda_function" "runEcsTask" {
     Name        = "Run ECS task function"
     Environment = "Dev"
   }
+}
+
+resource "aws_lambda_function_event_invoke_config" "runEcsRetries" {
+  function_name                = aws_lambda_function.runEcsTask.function_name
+  maximum_event_age_in_seconds = 1800
+  maximum_retry_attempts       = 2
 }
 
 resource "aws_cloudwatch_log_group" "runEcsTaskLogGroup" {

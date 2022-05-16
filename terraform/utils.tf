@@ -131,19 +131,15 @@ resource "aws_sqs_queue" "inputFIFOQueue" {
   content_based_deduplication = true
   sqs_managed_sse_enabled     = true
 
-  receive_wait_time_seconds  = 10
-  message_retention_seconds  = 345600
+  receive_wait_time_seconds  = 20
+  message_retention_seconds  = 86400
   max_message_size           = 262144
   delay_seconds              = 0
   visibility_timeout_seconds = 60
 
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.inputFIFOQueue_Deadletter.arn
-    maxReceiveCount     = 100
-  })
-  redrive_allow_policy = jsonencode({
-    redrivePermission = "byQueue",
-    sourceQueueArns   = ["${aws_sqs_queue.inputFIFOQueue_Deadletter.arn}"]
+    maxReceiveCount     = 2
   })
 
   tags = {
@@ -158,11 +154,11 @@ resource "aws_sqs_queue" "inputFIFOQueue_Deadletter" {
   content_based_deduplication = true
   sqs_managed_sse_enabled     = true
 
-  receive_wait_time_seconds  = 10
-  message_retention_seconds  = 345600
+  receive_wait_time_seconds  = 20
+  message_retention_seconds  = 604800
   max_message_size           = 262144
   delay_seconds              = 0
-  visibility_timeout_seconds = 10
+  visibility_timeout_seconds = 60
 
   tags = {
     Name        = "Input info DLQ Queue"
@@ -195,17 +191,13 @@ resource "aws_sqs_queue" "sendMailQueue" {
 
   receive_wait_time_seconds  = 20
   message_retention_seconds  = 86400
-  max_message_size           = 24576
+  max_message_size           = 262144
   delay_seconds              = 0
-  visibility_timeout_seconds = 30
+  visibility_timeout_seconds = 60
 
-  redrive_policy = jsonencode({
-    deadLetterTargetArn = aws_sqs_queue.sendMailQueue_deadLetter.arn
-    maxReceiveCount     = 100
-  })
-  redrive_allow_policy = jsonencode({
-    redrivePermission = "byQueue",
-    sourceQueueArns   = ["${aws_sqs_queue.sendMailQueue_deadLetter.arn}"]
+    redrive_policy = jsonencode({
+      deadLetterTargetArn = aws_sqs_queue.sendMailQueue_deadLetter.arn
+      maxReceiveCount     = 2
   })
 
   tags = {
@@ -219,10 +211,10 @@ resource "aws_sqs_queue" "sendMailQueue_deadLetter" {
   sqs_managed_sse_enabled = true
 
   receive_wait_time_seconds  = 20
-  message_retention_seconds  = 86400
-  max_message_size           = 24576
+  message_retention_seconds  = 604800
+  max_message_size           = 262144
   delay_seconds              = 0
-  visibility_timeout_seconds = 30
+  visibility_timeout_seconds = 60
 
   tags = {
     Name        = "Send Mail DLQ Queue"
@@ -252,11 +244,11 @@ resource "aws_sqs_queue_policy" "sendMailQueue_deadLetterPolicy" {
 resource "aws_cloudwatch_metric_alarm" "sendMailDLQ_alarm" {
   alarm_name                = "sendMailDQL_alarm"
   comparison_operator       = "GreaterThanThreshold"
-  evaluation_periods        = "5"
+  evaluation_periods        = "3"
   metric_name               = "ApproximateNumberOfMessagesVisible"
   namespace                 = "AWS/SQS"
-  period                    = "3600"
-  statistic                 = "Minimum"
+  period                    = "900"
+  statistic                 = "Maximum"
   threshold                 = "0"
   treat_missing_data        = "notBreaching"
   insufficient_data_actions = []
@@ -269,11 +261,11 @@ resource "aws_cloudwatch_metric_alarm" "sendMailDLQ_alarm" {
 resource "aws_cloudwatch_metric_alarm" "FifoDLQ_alarm" {
   alarm_name                = "fifoDQL_alarm"
   comparison_operator       = "GreaterThanThreshold"
-  evaluation_periods        = "5"
+  evaluation_periods        = "3"
   metric_name               = "ApproximateNumberOfMessagesVisible"
   namespace                 = "AWS/SQS"
-  period                    = "3600"
-  statistic                 = "Minimum"
+  period                    = "900"
+  statistic                 = "Maximum"
   threshold                 = "0"
   treat_missing_data        = "notBreaching"
   insufficient_data_actions = []
@@ -379,10 +371,6 @@ resource "aws_lambda_function" "sendMail" {
   runtime       = "python3.9"
   architectures = ["arm64"]
 
-  dead_letter_config {
-    target_arn = aws_sqs_queue.sendMailQueue_deadLetter.arn
-  }
-
   environment {
     variables = {
       psw_gmail = var.gmail
@@ -395,6 +383,12 @@ resource "aws_lambda_function" "sendMail" {
     Name        = "Send Mail function"
     Environment = "Dev"
   }
+}
+
+resource "aws_lambda_function_event_invoke_config" "sendMailRetries" {
+  function_name                = aws_lambda_function.sendMail.function_name
+  maximum_event_age_in_seconds = 1800
+  maximum_retry_attempts       = 2
 }
 
 #SendMail log group and subscription to Opensearch
@@ -448,13 +442,6 @@ resource "aws_iam_policy" "SQSPollerPolicySendMail" {
   policy = templatefile("./templates/SQSPoller.json", { queue_name = "${aws_sqs_queue.sendMailQueue.name}" })
 }
 
-resource "aws_iam_policy" "SendtoDLQPolicy" {
-  name        = "SendToSendMailDLQ"
-  description = "Policy to allow sending to dlq to sendmail lambda"
-
-  policy = templatefile("./templates/SQSSend.json", { queue_name = "${aws_sqs_queue.sendMailQueue_deadLetter.name}" })
-}
-
 resource "aws_iam_policy" "cwlogging" {
   name        = "cwlogging"
   description = "IAM policy for logging to Cloudwatch"
@@ -471,9 +458,4 @@ resource "aws_iam_role_policy_attachment" "lambdaLogs1" {
 resource "aws_iam_role_policy_attachment" "lambdaLogs2" {
   role       = aws_iam_role.lambdaSQSRole.name
   policy_arn = aws_iam_policy.SQSPollerPolicySendMail.arn
-}
-
-resource "aws_iam_role_policy_attachment" "lambdaLogs3" {
-  role       = aws_iam_role.lambdaSQSRole.name
-  policy_arn = aws_iam_policy.SendtoDLQPolicy.arn
 }
