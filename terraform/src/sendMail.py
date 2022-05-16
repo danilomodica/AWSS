@@ -11,18 +11,21 @@ def lambda_handler(event, context):
             'statusCode': 200,
             'body': json.dumps('Mail sent')
         }
-    
+        
         msg = json.loads(record["body"])
-        res = send_email(msg["mail"], msg["job_id"], int(msg["message_type"]), msg["error_msg"])
-
-        if res is not True:
+        
+        try:
+            send_email(msg["mail"], msg["job_id"], int(msg["message_type"]), msg["error_msg"])
+        except Exception as e:
             json_output = {
                 'statusCode': 500,
-                'body': json.dumps(res)
+                'body': json.dumps('Mail not sent. Generic error')
             }
+            print(e)
+        finally:
+            print(json_output)
             
-        print(json_output)
-
+            
 def send_email(user_mail, job_id, message_type, error_msg):
     gmail_user = 'awss.unipv@gmail.com'
     gmail_app_password = os.environ['psw_gmail']
@@ -45,11 +48,6 @@ def send_email(user_mail, job_id, message_type, error_msg):
     msg['Subject'] = sent_subject
     msg.set_content(sent_body)
 
-    try:
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as session:
-            session.login(gmail_user, gmail_app_password)
-            session.send_message(msg)
-        return True
-    except Exception as e:
-        print(e)
-        return False
+    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as session:
+        session.login(gmail_user, gmail_app_password)
+        session.send_message(msg)
