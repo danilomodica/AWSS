@@ -20,6 +20,15 @@ resource "aws_s3_bucket_acl" "www_acl" {
   acl    = "private"
 }
 
+resource "aws_s3_bucket_public_access_block" "wwwAccessBlock" {
+  bucket = aws_s3_bucket.www_bucket.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  restrict_public_buckets = true
+  ignore_public_acls      = true
+}
+
 resource "aws_s3_bucket_website_configuration" "www_bucketWebConfig" {
   bucket = aws_s3_bucket.www_bucket.id
 
