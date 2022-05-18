@@ -23,15 +23,12 @@ variable "region" {
 }
 
 variable "upload_directory" { default = "../web-interface/" }
-variable "bucket_name" { default = "awss" }
+variable "service_name" { default = "awss" }
 variable "website_url" { default = "awss-cloud.ga" }
 variable "email" { default = "awss.unipv@gmail.com" }
 
 variable "acm_certificate_arn" { default = "arn:aws:acm:us-east-1:389487414326:certificate/72c48e73-7243-4df2-87ca-cb1ad8f82172" } #arn certificato SSL/TLS (creato a priori)
-variable "certificate_dns_record1" { default = "_639b941d3a539ce5f1b80ded0cdf52c6.jhztdrwbnw.acm-validations.aws." }
-variable "certificate_cname1" { default = "_60bc1a0532bf2a25eeeb788b15dce1ff" }
-variable "certificate_dns_record2" { default = "_14c7587d8064c73875ba01c9d4852787.rdnyqppgxp.acm-validations.aws." }
-variable "certificate_cname2" { default = "_e3fa9277d49d65725e805971f5f4a099" }
+variable "route_zone_id" {default = "Z06871683OMTQJ90WZ6D5"}
 
 data "aws_caller_identity" "current" {} # to take iam ID
 
@@ -50,7 +47,7 @@ provider "aws" {
   secret_key = var.ssk
 }
 
-provider "aws" { #Some services are only available in us-easy-1 (cloudfront/route53)
+provider "aws" { #Some services are only available in us-east-1 (cloudfront/route53)
   alias      = "us-east-1"
   region     = "us-east-1"
   access_key = var.ak
