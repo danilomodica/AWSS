@@ -18,7 +18,7 @@ def lambda_handler(event, context):
             
             
 def send_email(user_mail, job_id, message_type, error_msg):
-    gmail_user = 'awss.unipv@gmail.com'
+    gmail_user = os.environ['gmail_mail']
     gmail_app_password = os.environ['psw_gmail']
     sent_from = gmail_user
     sent_to = user_mail

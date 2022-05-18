@@ -24,7 +24,7 @@ Various settings can be changed by modifying the file **main.tf**
 In particular they are:
 
 * *region* : specify the aws region where you want to deploy the infrastructure
-* *bucket_name*: name of the bucket that will contain static website files
+* *service_name*: name of the service, awss in this case
 * *website_url* url of the website that will host the webapp
 * *email* : gmail email used to send notification to the user at the end of a computation (you can change provider in src/sendMail.py code)
 * *certificate related variables* : variables related to the website certificates for www and non-www domains

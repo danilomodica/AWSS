@@ -2,7 +2,7 @@ locals { mime_types = jsondecode(file("./templates/mime.json")) }
 
 # WWW S3 BUCKET
 resource "aws_s3_bucket" "www_bucket" {
-  bucket = "www.${var.bucket_name}"
+  bucket = "www.${var.service_name}"
 
   tags = {
     Name        = "S3 Website"
@@ -47,7 +47,7 @@ resource "aws_s3_bucket_cors_configuration" "www_bucketCORS" {
   cors_rule {
     allowed_headers = ["Authorization", "Content-Length"]
     allowed_methods = ["GET"]
-    allowed_origins = ["https://www.${var.bucket_name}"]
+    allowed_origins = ["https://www.${var.service_name}"]
     max_age_seconds = 3000
   }
 }
@@ -82,7 +82,7 @@ resource "aws_cloudfront_origin_access_identity" "CFOAI" {
 resource "aws_cloudfront_distribution" "www_s3_distribution" {
   origin {
     domain_name = aws_s3_bucket.www_bucket.bucket_domain_name
-    origin_id   = "S3-www.${var.bucket_name}"
+    origin_id   = "S3-www.${var.service_name}"
 
     origin_shield {
       enabled              = true
@@ -115,7 +115,7 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD"]
     cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "S3-www.${var.bucket_name}"
+    target_origin_id = "S3-www.${var.service_name}"
 
     forwarded_values {
       query_string = false
@@ -150,18 +150,9 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
   }
 }
 
-#Adding domain to Route53 redirecting to Cloudfront resources
-resource "aws_route53_zone" "route53_zone" {
-  name = var.website_url
-
-  tags = {
-    Name        = "Route53 Zone"
-    Environment = "Dev"
-  }
-}
-
+#Route53 resources
 resource "aws_route53_record" "cloudfront-www-ipv4" {
-  zone_id = aws_route53_zone.route53_zone.zone_id
+  zone_id = var.route_zone_id
   name    = var.website_url
   type    = "A"
 
@@ -173,7 +164,7 @@ resource "aws_route53_record" "cloudfront-www-ipv4" {
 }
 
 resource "aws_route53_record" "cloudfront-www-ipv6" {
-  zone_id = aws_route53_zone.route53_zone.zone_id
+  zone_id = var.route_zone_id
   name    = var.website_url
   type    = "AAAA"
 
@@ -185,32 +176,11 @@ resource "aws_route53_record" "cloudfront-www-ipv6" {
 }
 
 resource "aws_route53_record" "www" {
-  zone_id = aws_route53_zone.route53_zone.zone_id
+  zone_id = var.route_zone_id
   name    = "www.${var.website_url}"
   type    = "CNAME"
   ttl     = "300" #3600
   records = [var.website_url]
-}
-
-resource "aws_route53_record" "certificateCNAME1" { # For certificate 1
-  zone_id = aws_route53_zone.route53_zone.zone_id
-  name    = "${var.certificate_cname1}.${var.website_url}"
-  type    = "CNAME"
-  ttl     = "300" #3600
-  records = ["${var.certificate_dns_record1}"]
-}
-
-resource "aws_route53_record" "certificateCNAME2" { # For certificate 2
-  zone_id = aws_route53_zone.route53_zone.zone_id
-  name    = "${var.certificate_cname2}.www.${var.website_url}"
-  type    = "CNAME"
-  ttl     = "300" #3600
-  records = ["${var.certificate_dns_record2}"]
-}
-
-output "Route53_Nameservers" {
-  value       = aws_route53_zone.route53_zone.name_servers
-  description = "Nameserver Route53 to be configured in the domain registrar"
 }
 
 resource "aws_route53_health_check" "r53HealthCheck" {
@@ -238,6 +208,7 @@ resource "aws_cloudwatch_metric_alarm" "r53_alarm" {
   period                    = "60"
   statistic                 = "Minimum"
   threshold                 = "1"
+  treat_missing_data        = "notBreaching"
   insufficient_data_actions = []
   alarm_description         = "Send an alarm if website is down"
   alarm_actions             = [aws_sns_topic.topic.arn]
