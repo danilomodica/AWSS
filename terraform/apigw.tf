@@ -487,9 +487,11 @@ resource "aws_api_gateway_method_settings" "stage-settings" {
   method_path = "*/*"
 
   settings {
-    metrics_enabled    = true
-    logging_level      = "ERROR"
-    data_trace_enabled = true
+    metrics_enabled        = true
+    logging_level          = "ERROR"
+    data_trace_enabled     = true
+    throttling_burst_limit = 500
+    throttling_rate_limit  = 50
   }
 }
 
