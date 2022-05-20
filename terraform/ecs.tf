@@ -83,7 +83,9 @@ resource "aws_iam_role_policy_attachment" "ecs-resources-access-role-policy-atta
   policy_arn = aws_iam_policy.cwlogging.arn
 }
 
-resource "aws_ecs_task_definition" "ecs-task-definition" {
+/* Definition ecs task with different sizes*/
+/* Small */
+resource "aws_ecs_task_definition" "ecs-task-definition-small" {
   family                = "lcs"
   container_definitions = templatefile("./templates/ContainerConf.json", { name = "${aws_ecr_repository.lcs.name}", repo = "${aws_ecr_repository.lcs.repository_url}", logGroup = "${aws_cloudwatch_log_group.ECSLogGroup.name}" })
 
@@ -94,6 +96,101 @@ resource "aws_ecs_task_definition" "ecs-task-definition" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
   memory                   = 512
+
+  runtime_platform {
+    operating_system_family = "LINUX"
+    cpu_architecture        = "X86_64"
+  }
+}
+
+/* Medium-Small*/
+resource "aws_ecs_task_definition" "ecs-task-definition-medium-small" {
+  family                = "lcs"
+  container_definitions = templatefile("./templates/ContainerConf.json", { name = "${aws_ecr_repository.lcs.name}", repo = "${aws_ecr_repository.lcs.repository_url}", logGroup = "${aws_cloudwatch_log_group.ECSLogGroup.name}" })
+
+  task_role_arn      = aws_iam_role.ecs-resources-access.arn
+  execution_role_arn = aws_iam_role.ecs-task-exec.arn
+
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 1024
+
+  runtime_platform {
+    operating_system_family = "LINUX"
+    cpu_architecture        = "X86_64"
+  }
+}
+
+/* Medium*/
+resource "aws_ecs_task_definition" "ecs-task-definition-medium" {
+  family                = "lcs"
+  container_definitions = templatefile("./templates/ContainerConf.json", { name = "${aws_ecr_repository.lcs.name}", repo = "${aws_ecr_repository.lcs.repository_url}", logGroup = "${aws_cloudwatch_log_group.ECSLogGroup.name}" })
+
+  task_role_arn      = aws_iam_role.ecs-resources-access.arn
+  execution_role_arn = aws_iam_role.ecs-task-exec.arn
+
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 2048
+
+  runtime_platform {
+    operating_system_family = "LINUX"
+    cpu_architecture        = "X86_64"
+  }
+}
+
+/* Medium-Large*/
+resource "aws_ecs_task_definition" "ecs-task-definition-medium-large" {
+  family                = "lcs"
+  container_definitions = templatefile("./templates/ContainerConf.json", { name = "${aws_ecr_repository.lcs.name}", repo = "${aws_ecr_repository.lcs.repository_url}", logGroup = "${aws_cloudwatch_log_group.ECSLogGroup.name}" })
+
+  task_role_arn      = aws_iam_role.ecs-resources-access.arn
+  execution_role_arn = aws_iam_role.ecs-task-exec.arn
+
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 4096
+
+  runtime_platform {
+    operating_system_family = "LINUX"
+    cpu_architecture        = "X86_64"
+  }
+}
+
+/*Large*/
+resource "aws_ecs_task_definition" "ecs-task-definition-large" {
+  family                = "lcs"
+  container_definitions = templatefile("./templates/ContainerConf.json", { name = "${aws_ecr_repository.lcs.name}", repo = "${aws_ecr_repository.lcs.repository_url}", logGroup = "${aws_cloudwatch_log_group.ECSLogGroup.name}" })
+
+  task_role_arn      = aws_iam_role.ecs-resources-access.arn
+  execution_role_arn = aws_iam_role.ecs-task-exec.arn
+
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 8192
+
+  runtime_platform {
+    operating_system_family = "LINUX"
+    cpu_architecture        = "X86_64"
+  }
+}
+
+/* Extra-Large*/
+resource "aws_ecs_task_definition" "ecs-task-definition-extra-large" {
+  family                = "lcs"
+  container_definitions = templatefile("./templates/ContainerConf.json", { name = "${aws_ecr_repository.lcs.name}", repo = "${aws_ecr_repository.lcs.repository_url}", logGroup = "${aws_cloudwatch_log_group.ECSLogGroup.name}" })
+
+  task_role_arn      = aws_iam_role.ecs-resources-access.arn
+  execution_role_arn = aws_iam_role.ecs-task-exec.arn
+
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 24576
 
   runtime_platform {
     operating_system_family = "LINUX"
@@ -160,8 +257,21 @@ resource "aws_lambda_function" "runEcsTask" {
     variables = {
       region               = var.region
       cluster              = aws_ecs_cluster.ecs-cluster.arn
-      task_definition_name = format("%s:%s", aws_ecs_task_definition.ecs-task-definition.family, aws_ecs_task_definition.ecs-task-definition.revision)
-      app_name_override    = aws_ecs_task_definition.ecs-task-definition.family
+
+      task_definition_name_small = format("%s:%s", aws_ecs_task_definition.ecs-task-definition-small.family, aws_ecs_task_definition.ecs-task-definition-small.revision)
+      task_definition_name_medium_small = format("%s:%s", aws_ecs_task_definition.ecs-task-definition-medium-small.family, aws_ecs_task_definition.ecs-task-definition-medium-small.revision)
+      task_definition_name_medium = format("%s:%s", aws_ecs_task_definition.ecs-task-definition-medium.family, aws_ecs_task_definition.ecs-task-definition-medium.revision)
+      task_definition_name_medium_large = format("%s:%s", aws_ecs_task_definition.ecs-task-definition-medium-large.family, aws_ecs_task_definition.ecs-task-definition-medium-large.revision)
+      task_definition_name_large = format("%s:%s", aws_ecs_task_definition.ecs-task-definition-large.family, aws_ecs_task_definition.ecs-task-definition-large.revision)
+      task_definition_name_extra_large = format("%s:%s", aws_ecs_task_definition.ecs-task-definition-extra-large.family, aws_ecs_task_definition.ecs-task-definition-extra-large.revision)
+
+      app_name_override_small    = aws_ecs_task_definition.ecs-task-definition-small.family
+      app_name_override_medium_small    = aws_ecs_task_definition.ecs-task-definition-medium-small.family
+      app_name_override_medium    = aws_ecs_task_definition.ecs-task-definition-medium.family
+      app_name_override_medium_large    = aws_ecs_task_definition.ecs-task-definition-medium-large.family
+      app_name_override_large    = aws_ecs_task_definition.ecs-task-definition-large.family
+      app_name_override_extra_large    = aws_ecs_task_definition.ecs-task-definition-extra-large.family
+
       bucket_in            = aws_s3_bucket.AWSSInputFiles.id
       bucket_out           = aws_s3_bucket.AWSSResultFiles.id
       queue_url            = aws_sqs_queue.sendMailQueue.url
