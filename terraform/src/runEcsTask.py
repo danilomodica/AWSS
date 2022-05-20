@@ -12,8 +12,29 @@ def lambda_handler(event, context):
 
         FARGATE_CLUSTER = os.environ['cluster']
         REGION = os.environ['region']
-        FARGATE_TASK_DEF_NAME = os.environ['task_definition_name']
-        APP_NAME_FOR_OVERRIDE = os.environ['app_name_override']
+        size1 = msg["size1"]
+        size2 = msg["size2"]
+        # Siccome un intero è 4 byte, la stringa 1byte per carattere, divido per un milione => dimensione matrice in MB
+        dim_matrix = (4 * size1 * size2)/1000000
+        if  dim_matrix <= 400:
+            FARGATE_TASK_DEF_NAME = os.environ['task_definition_name_small']
+            APP_NAME_FOR_OVERRIDE = os.environ['app_name_override_small']
+        elif  dim_matrix <= 800: 
+            FARGATE_TASK_DEF_NAME = os.environ['task_definition_name_medium_small']
+            APP_NAME_FOR_OVERRIDE = os.environ['app_name_override_medium_small']
+        elif dim_matrix <= 1600: 
+            FARGATE_TASK_DEF_NAME = os.environ['task_definition_name_medium']
+            APP_NAME_FOR_OVERRIDE = os.environ['app_name_override_medium']        
+        elif dim_matrix <= 3200:        
+            FARGATE_TASK_DEF_NAME = os.environ['task_definition_name_medium_large']
+            APP_NAME_FOR_OVERRIDE = os.environ['app_name_override_medium_large']
+        elif dim_matrix <= 6400:
+            FARGATE_TASK_DEF_NAME = os.environ['task_definition_name_large']
+            APP_NAME_FOR_OVERRIDE = os.environ['app_name_override_large']
+        elif dim_matrix <= 20000:
+            FARGATE_TASK_DEF_NAME = os.environ['task_definition_name_extra_large']
+            APP_NAME_FOR_OVERRIDE = os.environ['app_name_override_extra_large']        
+        
         FARGATE_SUBNET_ID = "subnet-094570c6dece4a335"
         SECURITY_GROUP_ID = "sg-0488ade7aedc940b6"
     

@@ -86,7 +86,7 @@ resource "aws_iam_role_policy_attachment" "ecs-resources-access-role-policy-atta
 /* Definition ecs task with different sizes*/
 /* Small */
 resource "aws_ecs_task_definition" "ecs-task-definition-small" {
-  family                = "lcs"
+  family                = "lcs-small"
   container_definitions = templatefile("./templates/ContainerConf.json", { name = "${aws_ecr_repository.lcs.name}", repo = "${aws_ecr_repository.lcs.repository_url}", logGroup = "${aws_cloudwatch_log_group.ECSLogGroup.name}" })
 
   task_role_arn      = aws_iam_role.ecs-resources-access.arn
@@ -105,7 +105,7 @@ resource "aws_ecs_task_definition" "ecs-task-definition-small" {
 
 /* Medium-Small*/
 resource "aws_ecs_task_definition" "ecs-task-definition-medium-small" {
-  family                = "lcs"
+  family                = "lcs-medium-small"
   container_definitions = templatefile("./templates/ContainerConf.json", { name = "${aws_ecr_repository.lcs.name}", repo = "${aws_ecr_repository.lcs.repository_url}", logGroup = "${aws_cloudwatch_log_group.ECSLogGroup.name}" })
 
   task_role_arn      = aws_iam_role.ecs-resources-access.arn
@@ -124,7 +124,7 @@ resource "aws_ecs_task_definition" "ecs-task-definition-medium-small" {
 
 /* Medium*/
 resource "aws_ecs_task_definition" "ecs-task-definition-medium" {
-  family                = "lcs"
+  family                = "lcs-medium"
   container_definitions = templatefile("./templates/ContainerConf.json", { name = "${aws_ecr_repository.lcs.name}", repo = "${aws_ecr_repository.lcs.repository_url}", logGroup = "${aws_cloudwatch_log_group.ECSLogGroup.name}" })
 
   task_role_arn      = aws_iam_role.ecs-resources-access.arn
@@ -143,7 +143,7 @@ resource "aws_ecs_task_definition" "ecs-task-definition-medium" {
 
 /* Medium-Large*/
 resource "aws_ecs_task_definition" "ecs-task-definition-medium-large" {
-  family                = "lcs"
+  family                = "lcs-medium-large"
   container_definitions = templatefile("./templates/ContainerConf.json", { name = "${aws_ecr_repository.lcs.name}", repo = "${aws_ecr_repository.lcs.repository_url}", logGroup = "${aws_cloudwatch_log_group.ECSLogGroup.name}" })
 
   task_role_arn      = aws_iam_role.ecs-resources-access.arn
@@ -151,7 +151,7 @@ resource "aws_ecs_task_definition" "ecs-task-definition-medium-large" {
 
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = 256
+  cpu                      = 512
   memory                   = 4096
 
   runtime_platform {
@@ -162,7 +162,7 @@ resource "aws_ecs_task_definition" "ecs-task-definition-medium-large" {
 
 /*Large*/
 resource "aws_ecs_task_definition" "ecs-task-definition-large" {
-  family                = "lcs"
+  family                = "lcs-large"
   container_definitions = templatefile("./templates/ContainerConf.json", { name = "${aws_ecr_repository.lcs.name}", repo = "${aws_ecr_repository.lcs.repository_url}", logGroup = "${aws_cloudwatch_log_group.ECSLogGroup.name}" })
 
   task_role_arn      = aws_iam_role.ecs-resources-access.arn
@@ -170,7 +170,7 @@ resource "aws_ecs_task_definition" "ecs-task-definition-large" {
 
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = 256
+  cpu                      = 1024
   memory                   = 8192
 
   runtime_platform {
@@ -181,7 +181,7 @@ resource "aws_ecs_task_definition" "ecs-task-definition-large" {
 
 /* Extra-Large*/
 resource "aws_ecs_task_definition" "ecs-task-definition-extra-large" {
-  family                = "lcs"
+  family                = "lcs-extra-large"
   container_definitions = templatefile("./templates/ContainerConf.json", { name = "${aws_ecr_repository.lcs.name}", repo = "${aws_ecr_repository.lcs.repository_url}", logGroup = "${aws_cloudwatch_log_group.ECSLogGroup.name}" })
 
   task_role_arn      = aws_iam_role.ecs-resources-access.arn
@@ -189,7 +189,7 @@ resource "aws_ecs_task_definition" "ecs-task-definition-extra-large" {
 
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = 256
+  cpu                      = 4096
   memory                   = 24576
 
   runtime_platform {
