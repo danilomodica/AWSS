@@ -12,8 +12,8 @@ def lambda_handler(event, context):
 
         FARGATE_CLUSTER = os.environ['cluster']
         REGION = os.environ['region']
-        size1 = msg["size1"]
-        size2 = msg["size2"]
+        size1 = int(msg["size1"])
+        size2 = int(msg["size2"])
         # Siccome un intero è 4 byte, la stringa 1byte per carattere, divido per un milione => dimensione matrice in MB
         dim_matrix = (4 * size1 * size2)/1000000
         if  dim_matrix <= 400:
