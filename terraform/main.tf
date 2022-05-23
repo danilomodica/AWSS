@@ -54,7 +54,7 @@ provider "aws" { #Some services are only available in us-east-1 (cloudfront/rout
   secret_key = var.ssk
 }
 
-output "Region" {
+output "region" {
   value       = var.region
   description = "Distribution region"
 }

@@ -16,6 +16,11 @@ resource "aws_ecr_repository" "lcs" {
   }
 }
 
+output "ecs-repo" {
+  value       = aws_ecr_repository.lcs.name
+  description = "ECR Repository Name"
+}
+
 /* Role for ECS task definition */
 resource "aws_iam_role" "ecs-task-exec" {
   name        = "ecs-task-execution-role"
