@@ -33,7 +33,9 @@ def lambda_handler(event, context):
             APP_NAME_FOR_OVERRIDE = os.environ['app_name_override_large']
         elif dim_matrix <= 20000:
             FARGATE_TASK_DEF_NAME = os.environ['task_definition_name_extra_large']
-            APP_NAME_FOR_OVERRIDE = os.environ['app_name_override_extra_large']        
+            APP_NAME_FOR_OVERRIDE = os.environ['app_name_override_extra_large']      
+                    
+        print("FARGATE_TASK_DEF_NAME", FARGATE_TASK_DEF_NAME, "APP_NAME_FOR_OVERRIDE", APP_NAME_FOR_OVERRIDE)
         
         FARGATE_SUBNET_ID = "subnet-094570c6dece4a335"
         SECURITY_GROUP_ID = "sg-0488ade7aedc940b6"
