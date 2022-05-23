@@ -22,14 +22,14 @@ char* lcs (char *a, int n, char *b, int m, char *s, int block_size) {
     int i, j, k, t, l;
 	int i_start, j_start;
 
-	short *z = calloc((n + 1) * (m + 1), sizeof (short));
-    short **c = calloc((n + 1), sizeof (short *));
+	int *z = calloc((n + 1) * (m + 1), sizeof (int));
+    int **c = calloc((n + 1), sizeof (int *));
     
 	//Assign to variable c the pointers to the different rows of the matrix 
 	for (i = 0; i <= n; i++) {
         c[i] = &z[i * (m + 1)];
     }
-
+    
 	for (k=1; k <= (m+n)/block_size - 1; k++){   	    		
 		#pragma omp parallel for private(i,j, i_start, j_start)
 		for (l=MAX(1,k-n/block_size+1); l <= MIN(m/block_size,k); l++){				
@@ -51,11 +51,10 @@ char* lcs (char *a, int n, char *b, int m, char *s, int block_size) {
 		    }				
 		}				
 	}
-
+    
     t = c[n][m];
     s = (char*)malloc((t+1) * sizeof(char));;
     
-	
 	//Rebuild of the lcs string
     for (i = n, j = m, k = t - 1; k >= 0;) {
 		if (a[i - 1] == b[j - 1]) {
@@ -101,7 +100,7 @@ int main (int argc, char *argv[]) {
     if(argc != 5) { //file1.txt file2.txt matrix_block_size
 		printf("\033[31;1m Wrong parameters! \033[0m\n");    	
 		return -1;
-	}	
+	}
 
 	if ((fin1 = fopen(argv[1], "r")) == NULL || (fin2 = fopen(argv[2], "r")) == NULL) {
 		printf("\033[31;1m Error in opening file1 or file2! \033[0m\n");
@@ -111,10 +110,10 @@ int main (int argc, char *argv[]) {
 
 	a = readFile(fin1, a, block_size);
 	b = readFile(fin2, b, block_size);   
-	
+
 	preproc_string((int)strlen(a), &n_tondo, block_size, a, 1);
 	preproc_string((int)strlen(b), &m_tondo, block_size, b, 2);
-    printf("lcs\n");
+    
     s=lcs(a, n_tondo, b, m_tondo, s, block_size);
 
 	if ((result = fopen(argv[4], "w")) == NULL) {
