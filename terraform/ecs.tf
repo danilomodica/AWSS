@@ -195,7 +195,7 @@ resource "aws_ecs_task_definition" "ecs-task-definition-extra-large" {
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = 4096
-  memory                   = 24576
+  memory                   = 30720
 
   runtime_platform {
     operating_system_family = "LINUX"
@@ -270,12 +270,12 @@ resource "aws_lambda_function" "runEcsTask" {
       task_definition_name_large = format("%s:%s", aws_ecs_task_definition.ecs-task-definition-large.family, aws_ecs_task_definition.ecs-task-definition-large.revision)
       task_definition_name_extra_large = format("%s:%s", aws_ecs_task_definition.ecs-task-definition-extra-large.family, aws_ecs_task_definition.ecs-task-definition-extra-large.revision)
 
-      app_name_override_small    = aws_ecs_task_definition.ecs-task-definition-small.family
-      app_name_override_medium_small    = aws_ecs_task_definition.ecs-task-definition-medium-small.family
-      app_name_override_medium    = aws_ecs_task_definition.ecs-task-definition-medium.family
-      app_name_override_medium_large    = aws_ecs_task_definition.ecs-task-definition-medium-large.family
-      app_name_override_large    = aws_ecs_task_definition.ecs-task-definition-large.family
-      app_name_override_extra_large    = aws_ecs_task_definition.ecs-task-definition-extra-large.family
+      app_name_override_small    = aws_ecr_repository.lcs.name
+      app_name_override_medium_small    = aws_ecr_repository.lcs.name
+      app_name_override_medium    = aws_ecr_repository.lcs.name
+      app_name_override_medium_large    = aws_ecr_repository.lcs.name
+      app_name_override_large    = aws_ecr_repository.lcs.name
+      app_name_override_extra_large    = aws_ecr_repository.lcs.name
 
       bucket_in            = aws_s3_bucket.AWSSInputFiles.id
       bucket_out           = aws_s3_bucket.AWSSResultFiles.id
