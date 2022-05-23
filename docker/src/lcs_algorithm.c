@@ -21,7 +21,7 @@ char* readFile(FILE *fin, char *txt, int block_size) {
 char* lcs (char *a, int n, char *b, int m, char *s, int block_size) {
     int i, j, k, t, l;
 	int i_start, j_start;
-	printf("Instanzio matrice\n");
+
 	short *z = calloc((n + 1) * (m + 1), sizeof (short));
     short **c = calloc((n + 1), sizeof (short *));
     
@@ -29,7 +29,7 @@ char* lcs (char *a, int n, char *b, int m, char *s, int block_size) {
 	for (i = 0; i <= n; i++) {
         c[i] = &z[i * (m + 1)];
     }
-    printf("Calcoli matrice\n");
+
 	for (k=1; k <= (m+n)/block_size - 1; k++){   	    		
 		#pragma omp parallel for private(i,j, i_start, j_start)
 		for (l=MAX(1,k-n/block_size+1); l <= MIN(m/block_size,k); l++){				
@@ -52,12 +52,10 @@ char* lcs (char *a, int n, char *b, int m, char *s, int block_size) {
 		}				
 	}
 
-    printf("Ricostruzione stringa: istanzia\n");
     t = c[n][m];
     s = (char*)malloc((t+1) * sizeof(char));;
     
 	
-    printf("Ricostruzione stringa: for loop\n");
 	//Rebuild of the lcs string
     for (i = n, j = m, k = t - 1; k >= 0;) {
 		if (a[i - 1] == b[j - 1]) {
@@ -100,8 +98,6 @@ int main (int argc, char *argv[]) {
    	int n_tondo, m_tondo, block_size;
 	FILE* fin1, * fin2, * result;
 
-	printf("Inizio file c\n");
-
     if(argc != 5) { //file1.txt file2.txt matrix_block_size
 		printf("\033[31;1m Wrong parameters! \033[0m\n");    	
 		return -1;
@@ -112,13 +108,10 @@ int main (int argc, char *argv[]) {
 		return -1;
 	}
 	block_size = atoi(argv[3]);
-	printf("Lettura file\n");
 
 	a = readFile(fin1, a, block_size);
 	b = readFile(fin2, b, block_size);   
 	
-	printf("Preprocessing\n");
-
 	preproc_string((int)strlen(a), &n_tondo, block_size, a, 1);
 	preproc_string((int)strlen(b), &m_tondo, block_size, b, 2);
     printf("lcs\n");
