@@ -28,7 +28,7 @@ variable "website_url" { default = "awss-cloud.ga" }
 variable "email" { default = "awss.unipv@gmail.com" }
 
 variable "acm_certificate_arn" { default = "arn:aws:acm:us-east-1:389487414326:certificate/72c48e73-7243-4df2-87ca-cb1ad8f82172" } #arn certificato SSL/TLS (creato a priori)
-variable "route_zone_id" {default = "Z06871683OMTQJ90WZ6D5"}
+variable "route_zone_id" { default = "Z06871683OMTQJ90WZ6D5" }
 
 data "aws_caller_identity" "current" {} # to take iam ID
 

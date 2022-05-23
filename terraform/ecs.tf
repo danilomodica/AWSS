@@ -260,26 +260,26 @@ resource "aws_lambda_function" "runEcsTask" {
 
   environment {
     variables = {
-      region               = var.region
-      cluster              = aws_ecs_cluster.ecs-cluster.arn
+      region  = var.region
+      cluster = aws_ecs_cluster.ecs-cluster.arn
 
-      task_definition_name_small = format("%s:%s", aws_ecs_task_definition.ecs-task-definition-small.family, aws_ecs_task_definition.ecs-task-definition-small.revision)
+      task_definition_name_small        = format("%s:%s", aws_ecs_task_definition.ecs-task-definition-small.family, aws_ecs_task_definition.ecs-task-definition-small.revision)
       task_definition_name_medium_small = format("%s:%s", aws_ecs_task_definition.ecs-task-definition-medium-small.family, aws_ecs_task_definition.ecs-task-definition-medium-small.revision)
-      task_definition_name_medium = format("%s:%s", aws_ecs_task_definition.ecs-task-definition-medium.family, aws_ecs_task_definition.ecs-task-definition-medium.revision)
+      task_definition_name_medium       = format("%s:%s", aws_ecs_task_definition.ecs-task-definition-medium.family, aws_ecs_task_definition.ecs-task-definition-medium.revision)
       task_definition_name_medium_large = format("%s:%s", aws_ecs_task_definition.ecs-task-definition-medium-large.family, aws_ecs_task_definition.ecs-task-definition-medium-large.revision)
-      task_definition_name_large = format("%s:%s", aws_ecs_task_definition.ecs-task-definition-large.family, aws_ecs_task_definition.ecs-task-definition-large.revision)
-      task_definition_name_extra_large = format("%s:%s", aws_ecs_task_definition.ecs-task-definition-extra-large.family, aws_ecs_task_definition.ecs-task-definition-extra-large.revision)
+      task_definition_name_large        = format("%s:%s", aws_ecs_task_definition.ecs-task-definition-large.family, aws_ecs_task_definition.ecs-task-definition-large.revision)
+      task_definition_name_extra_large  = format("%s:%s", aws_ecs_task_definition.ecs-task-definition-extra-large.family, aws_ecs_task_definition.ecs-task-definition-extra-large.revision)
 
-      app_name_override_small    = aws_ecr_repository.lcs.name
-      app_name_override_medium_small    = aws_ecr_repository.lcs.name
-      app_name_override_medium    = aws_ecr_repository.lcs.name
-      app_name_override_medium_large    = aws_ecr_repository.lcs.name
-      app_name_override_large    = aws_ecr_repository.lcs.name
-      app_name_override_extra_large    = aws_ecr_repository.lcs.name
+      app_name_override_small        = aws_ecr_repository.lcs.name
+      app_name_override_medium_small = aws_ecr_repository.lcs.name
+      app_name_override_medium       = aws_ecr_repository.lcs.name
+      app_name_override_medium_large = aws_ecr_repository.lcs.name
+      app_name_override_large        = aws_ecr_repository.lcs.name
+      app_name_override_extra_large  = aws_ecr_repository.lcs.name
 
-      bucket_in            = aws_s3_bucket.AWSSInputFiles.id
-      bucket_out           = aws_s3_bucket.AWSSResultFiles.id
-      queue_url            = aws_sqs_queue.sendMailQueue.url
+      bucket_in  = aws_s3_bucket.AWSSInputFiles.id
+      bucket_out = aws_s3_bucket.AWSSResultFiles.id
+      queue_url  = aws_sqs_queue.sendMailQueue.url
     }
   }
 

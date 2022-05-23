@@ -374,7 +374,7 @@ resource "aws_lambda_function" "sendMail" {
   environment {
     variables = {
       gmail_mail = var.email
-      psw_gmail = var.gmail
+      psw_gmail  = var.gmail
     }
   }
 

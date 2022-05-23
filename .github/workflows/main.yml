@@ -1,4 +1,4 @@
-name: CI
+name: CICD
 
 # Triggers the workflow on push or pull request events but only for the main branch
 on:
@@ -21,12 +21,12 @@ jobs:
     environment: Production
 
     steps:
-    - uses: dorny/paths-filter@v2
-        with:
-          filters: |
-            src:
-              - '{{github.workspace}}/terraform/src/**'
-    - if: steps.changes.outputs.src == 'true'
+    # - uses: dorny/paths-filter@v2
+    #     with:
+    #       filters: |
+    #         src:
+    #           - '{{github.workspace}}/terraform/src/**'
+    # - if: steps.changes.outputs.src == 'true'
     - uses: actions/checkout@v3
     - name: Set up Python 3.9
       uses: actions/setup-python@v3
@@ -47,19 +47,20 @@ jobs:
       continue-on-error: true
     - name: Test with pytest
       run: |
-        pytest ${{github.workspace}}/tests/
+        pytest
+      working-directory: ${{github.workspace}}/tests/
 
   docker-python-test:
     runs-on: ubuntu-latest
     environment: Production
 
     steps:
-    - uses: dorny/paths-filter@v2
-        with:
-          filters: |
-            src:
-              - '{{github.workspace}}/docker/src/run.py'
-    - if: steps.changes.outputs.src == 'true'
+    # - uses: dorny/paths-filter@v2
+    #     with:
+    #       filters: |
+    #         src:
+    #           - '{{github.workspace}}/docker/src/run.py'
+    # - if: steps.changes.outputs.src == 'true'
     - uses: actions/checkout@v3
     - name: Set up Python 3.9
       uses: actions/setup-python@v3
@@ -83,23 +84,29 @@ jobs:
     environment: Production
 
     steps:
-    - uses: dorny/paths-filter@v2
-        with:
-          filters: |
-            src:
-              - '{{github.workspace}}/docker/src/lcs_algorithm.c'
-    - if: steps.changes.outputs.src == 'true'
+    # - uses: dorny/paths-filter@v2
+    #     with:
+    #       filters: |
+    #         src:
+    #           - '{{github.workspace}}/docker/src/lcs_algorithm.c'
+    # - if: steps.changes.outputs.src == 'true'
     - uses: actions/checkout@v3
 
-      working-directory: ${{github.workspace}}/docker/src/
     - name: make
       run: make
+      working-directory: ${{github.workspace}}/docker/src/
 
-      working-directory: ${{github.workspace}}/tests/
     - name: Test
       run: |
         echo "::set-output name=check-diff::$(./c-test.sh)"
+      working-directory: ${{github.workspace}}/tests/
       if: steps.check.outputs.triggered == 'false'
+      
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: lcs
+        path: ${{github.workspace}}/docker/src/lcs
 
   docker-container:
     runs-on: ubuntu-latest
@@ -107,23 +114,38 @@ jobs:
     environment: Production
 
     steps:
-    - uses: dorny/paths-filter@v2
-        with:
-          filters: |
-            src:
-              - '{{github.workspace}}/docker/**'
-    - if: steps.changes.outputs.src == 'true'
+    # - uses: dorny/paths-filter@v2
+    #     with:
+    #       filters: |
+    #         src:
+    #           - '{{github.workspace}}/docker/**'
+    # - if: steps.changes.outputs.src == 'true'
     - name: Checkout
       uses: actions/checkout@v3
+    
+    - name: Download artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: lcs
+        path: ./
 
-      name: Build, tag, and push image to Amazon ECR
+    - name: build docker container
       id: build-image
       run: |
         docker build -t lcs-container .
+        docker save lcs-container > /tmp/lcs-container.tar
+      working-directory: ${{github.workspace}}/docker/
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: lcs-container
+        path: /tmp/lcs-container.tar
+
 
   terraform:
     name: 'Terraform'
-    needs: python-test
+    needs: terraform-python-test
     runs-on: ubuntu-latest
     environment: Production
 
@@ -138,13 +160,13 @@ jobs:
         shell: bash
 
     steps:
-    - uses: dorny/paths-filter@v2
-        with:
-          filters: |
-            src:
-              - '{{github.workspace}}/terraform/**'
-              - '{{github.workspace}}/web-interface/**'
-    - if: steps.changes.outputs.src == 'true'
+    # - uses: dorny/paths-filter@v2
+    #     with:
+    #       filters: |
+    #         src:
+    #           - '{{github.workspace}}/terraform/**'
+    #           - '{{github.workspace}}/web-interface/**'
+    # - if: steps.changes.outputs.src == 'true'
     # Checkout the repository to the GitHub Actions runner
     - name: Checkout
       uses: actions/checkout@v3
@@ -155,6 +177,7 @@ jobs:
       uses: hashicorp/setup-terraform@v1
       with:
         cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+        terraform_wrapper: false
 
     # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
     - name: Terraform Init
@@ -178,8 +201,8 @@ jobs:
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
       run: |
         terraform apply -auto-approve
-        echo "::set-output name=region::$(terraform output region)"
-        echo "::set-output name=repository::$(terraform output ecs-repo)"
+        echo "::set-output name=region::$(terraform output -raw region)"
+        echo "::set-output name=repository::$(terraform output -raw ecs-repo)"
 
 
   deploy-ecs:
@@ -188,15 +211,15 @@ jobs:
     runs-on: ubuntu-latest
     environment: Production
 
-     steps:
-    - uses: dorny/paths-filter@v2
-        with:
-          filters: |
-            src:
-              - '{{github.workspace}}/docker/**'
-              - '{{github.workspace}}/terraform/ecs.tf'
-              - '{{github.workspace}}/terraform/main.tf'
-    - if: steps.changes.outputs.src == 'true'
+    steps:
+    # - uses: dorny/paths-filter@v2
+    #     with:
+    #       filters: |
+    #         src:
+    #           - '{{github.workspace}}/docker/**'
+    #           - '{{github.workspace}}/terraform/ecs.tf'
+    #           - '{{github.workspace}}/terraform/main.tf'
+    # - if: steps.changes.outputs.src == 'true'
     - name: Checkout
       uses: actions/checkout@v3
 
@@ -205,18 +228,28 @@ jobs:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{needs.terraform.outputs.region}}
+        aws-region: ${{ needs.terraform.outputs.output-region}}
 
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
 
-      name: Push image to Amazon ECR
+    - name: Download artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: lcs-container
+        path: /tmp
+
+    - name: Load Docker image
+      run: |
+        docker load --input /tmp/lcs-container.tar
+
+    - name: Push image to Amazon ECR
       id: push-image
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        docker tag lcs-container $ECR_REGISTRY/${{needs.terraform.outputs.repository}}:$IMAGE_TAG
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        echo "::set-output name=image::$ECR_REGISTRY/${{needs.terraform.outputs.repository}}:$IMAGE_TAG"
+        docker tag lcs-container ${ECR_REGISTRY}/${{needs.terraform.outputs.output-ecr-repo}}:${IMAGE_TAG}
+        docker push ${ECR_REGISTRY}/${{needs.terraform.outputs.output-ecr-repo}}:${IMAGE_TAG}
+        echo "::set-output name=image::${ECR_REGISTRY}/${{needs.terraform.outputs.output-ecr-repo}}:${IMAGE_TAG}"

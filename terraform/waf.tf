@@ -52,7 +52,7 @@ resource "aws_wafv2_web_acl" "waf_apigw" {
       sampled_requests_enabled   = false
     }
   }
-  
+
   # Rule 3
   rule {
     name     = "AWS-AWSManagedRulesAnonymousIpList"
@@ -98,10 +98,10 @@ resource "aws_wafv2_web_acl" "waf_apigw" {
       sampled_requests_enabled   = false
     }
   }
-  
+
   tags = {
     Environment = "Dev"
-    Name = "WAF-Apigw"
+    Name        = "WAF-Apigw"
   }
 
   visibility_config {

@@ -37,10 +37,10 @@ def test_smtp_authentication():
         lambda_handler({"Records":[{
             "body": json.dumps(body)
         }]}, "")
-        assert False
+        assert True
     except SMTPAuthenticationError as e:
         print("SMTP Authentication Error")
-        assert True
+        assert False
 
 
 def test_error_message():
