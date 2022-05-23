@@ -2,7 +2,7 @@
 [![forthebadge](https://svgshare.com/i/hHw.svg)](https://forthebadge.com)
 [![forthebadge](https://forthebadge.com/images/badges/built-with-love.svg)](https://forthebadge.com)
 
-[![Terraform](https://github.com/domenico-rgs/AWSS/actions/workflows/terraform.yml/badge.svg)](https://github.com/domenico-rgs/AWSS/actions/workflows/terraform.yml)
+[![CICD](https://github.com/domenico-rgs/AWSS/actions/workflows/main.yml/badge.svg)](https://github.com/domenico-rgs/AWSS/actions/workflows/main.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 Cloud-based web application that allows to calculate, given two strings of DNA, the longest common substring.
@@ -11,7 +11,7 @@ Cloud-based web application that allows to calculate, given two strings of DNA, 
 - [AWS](https://aws.amazon.com/)
 - [Docker](https://www.docker.com/) - version 20.10.16
 - [Bootstrap](https://getbootstrap.com/) - version 5.1.3
-- [Terraform](https://www.terraform.io/) - CLI version 1.1.9 • provider hashicorp/aws v4.13.0
+- [Terraform](https://www.terraform.io/) - CLI version 1.2.0 • provider hashicorp/aws v4.15.0
 
 ### Programming languages used
 - C - version C11

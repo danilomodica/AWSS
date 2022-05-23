@@ -248,8 +248,7 @@ jobs:
       id: push-image
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        IMAGE_TAG: ${{ github.sha }}
       run: |
-        docker tag lcs-container ${ECR_REGISTRY}/${{needs.terraform.outputs.output-ecr-repo}}:${IMAGE_TAG}
-        docker push ${ECR_REGISTRY}/${{needs.terraform.outputs.output-ecr-repo}}:${IMAGE_TAG}
-        echo "::set-output name=image::${ECR_REGISTRY}/${{needs.terraform.outputs.output-ecr-repo}}:${IMAGE_TAG}"
+        docker tag lcs-container ${ECR_REGISTRY}/${{needs.terraform.outputs.output-ecr-repo}}:latest
+        docker push ${ECR_REGISTRY}/${{needs.terraform.outputs.output-ecr-repo}}:latest
+        echo "::set-output name=image::${ECR_REGISTRY}/${{needs.terraform.outputs.output-ecr-repo}}:latest"
