@@ -22,8 +22,8 @@ char* lcs (char *a, int n, char *b, int m, char *s, int block_size) {
     int i, j, k, t, l;
 	int i_start, j_start;
 	printf("Instanzio matrice\n");
-	short *z = calloc((n + 1) * (m + 1), sizeof (short));
-    short **c = calloc((n + 1), sizeof (short *));
+	unsigned short *z = calloc((n + 1) * (m + 1), sizeof (unsigned short));
+    unsigned short **c = calloc((n + 1), sizeof (unsigned short *));
     
 	//Assign to variable c the pointers to the different rows of the matrix 
 	for (i = 0; i <= n; i++) {
