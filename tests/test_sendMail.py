@@ -1,6 +1,4 @@
-import pytest
 import json
-import os
 from smtplib import SMTPAuthenticationError
 import sys
 sys.path.append("..")
