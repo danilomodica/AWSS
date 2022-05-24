@@ -21,11 +21,6 @@ output "ecs-repo" {
   description = "ECR Repository Name"
 }
 
-
-/*
-
-*/
-
 resource "aws_ecr_lifecycle_policy" "foopolicy" {
   repository = aws_ecr_repository.lcs.name
 
