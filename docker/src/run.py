@@ -22,63 +22,75 @@ def check_string(textfile):
             return False
 
 
-AWS_REGION = "eu-central-1"
-data = os.environ
-s3 = boto3.resource('s3')
-bucket_in = s3.Bucket(data['bucket_in'])
-sqs_client = boto3.client("sqs", region_name=AWS_REGION)
-id = data["result_file"].split(".")[0]
-QUEUE_URL = data["queue_url"]
-MSG_ATTRIBUTES = {}
-msg = ""
-msg_type = 1
+def main():
+    # Define Variables 
+    AWS_REGION = "eu-central-1"
+    data = os.environ
+    s3 = boto3.resource('s3')
+    bucket_in = s3.Bucket(data['bucket_in'])
+    sqs_client = boto3.client("sqs", region_name=AWS_REGION)
+    id = data["result_file"].split(".")[0]
+    QUEUE_URL = data["queue_url"]
+    MSG_ATTRIBUTES = {}
+    msg = ""
+    msg_type = 1
 
-signal.signal(signal.SIGALRM, timeout_handler)
-signal.alarm(86400)  # max execution time 24h
+    # Limit max execution time to 24h
+    signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(86400)  
 
-try:
-    bucket_in.download_file(data['file1'], 'myfile1.txt')
-    bucket_in.download_file(data['file2'], 'myfile2.txt')
+    try:
+        # Read two files from S3 bucket
+        bucket_in.download_file(data['file1'], 'myfile1.txt')
+        bucket_in.download_file(data['file2'], 'myfile2.txt')
 
-    textfile1 = open("myfile1.txt", 'r')
-    textfile2 = open("myfile2.txt", 'r')
+        textfile1 = open("myfile1.txt", 'r')
+        textfile2 = open("myfile2.txt", 'r')
 
-    if(check_string(textfile1) is False or check_string(textfile2) is False):
-        msg = "ERROR: Wrong file content"
+        # Check if files contain correct DNA characters
+        if(check_string(textfile1) is False or check_string(textfile2) is False):
+            msg = "ERROR: Wrong file content"
+            msg_type = 0
+            print(msg)
+            textfile1.close()
+            textfile2.close()
+        else:
+            textfile1.close()
+            textfile2.close()
+            filename = "output_file.txt"
+           
+            # Execute LCS algorithm
+            check = os.system("./lcs myfile1.txt myfile2.txt 5 " + filename)
+
+            if check == 0:
+                with open(filename, "rb") as f:
+                    # Store output file into S3 bucket
+                    txt_data = f.read()
+                    object = s3.Object(data["bucket_out"], data["result_file"])
+                    object.put(Body=txt_data)
+                print("SUCCESS: Result has been stored")
+            else:
+                print(check)
+                msg_type = 0
+                msg = "ERROR: Something went wrong during execution. Please contact us"
+    except TimeOutException:
+        msg = "ERROR: Timeout"
         msg_type = 0
         print(msg)
-        textfile1.close()
-        textfile2.close()
-    else:
-        textfile1.close()
-        textfile2.close()
-        filename = "output_file.txt"
-        check = os.system("./lcs myfile1.txt myfile2.txt 5 " + filename)
+        os.killpg(os.getpgid(check.pid), signal.SIGTERM)
+    except Exception as err:
+        print(err)
+        msg_type = 0
+        msg = "ERROR: Generic error"
 
-        if check == 0:
-            with open(filename, "rb") as f:
-                txt_data = f.read()
-                object = s3.Object(data["bucket_out"], data["result_file"])
-                object.put(Body=txt_data)
-            print("SUCCESS: Result has been stored")
-        else:
-            print(check)
-            msg_type = 0
-            msg = "ERROR: Something went wrong during execution. Please contact us"
-except TimeOutException:
-    msg = "ERROR: Timeout"
-    msg_type = 0
-    print(msg)
-    os.killpg(os.getpgid(check.pid), signal.SIGTERM)
-except Exception as err:
-    print(err)
-    msg_type = 0
-    msg = "ERROR: Generic error"
+    # Add message to the SQS sendMail Queue
+    MSG_BODY = "{\"job_id\":\"" + id + "\",\"mail\":\"" + \
+        data["email"] + "\",\"message_type\":\"" + str(msg_type) + "\",\"error_msg\":\"" + msg + "\"}"
+    sqs_client.send_message(
+        QueueUrl=QUEUE_URL,
+        MessageAttributes=MSG_ATTRIBUTES,
+        MessageBody=MSG_BODY)
 
 
-MSG_BODY = "{\"job_id\":\"" + id + "\",\"mail\":\"" + \
-    data["email"] + "\",\"message_type\":\"" + str(msg_type) + "\",\"error_msg\":\"" + msg + "\"}"
-sqs_client.send_message(
-    QueueUrl=QUEUE_URL,
-    MessageAttributes=MSG_ATTRIBUTES,
-    MessageBody=MSG_BODY)
+if __name__ == "__main__":
+    main()
