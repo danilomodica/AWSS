@@ -52,6 +52,14 @@ jobs:
     environment: Production
 
     steps:
+    - uses: dorny/paths-filter@v2
+      id: changes
+      with:
+        filters: |
+          src:
+            - 'docker/src/run.py'
+    - if: steps.changes.outputs.src == 'true'
+    
     - name: Checkout
       uses: actions/checkout@v3
 
