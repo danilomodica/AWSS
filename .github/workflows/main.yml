@@ -120,7 +120,7 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: lcs
-        path: ./
+        path: ${{github.workspace}}/docker/src/
 
     - name: Build Docker image
       id: build-image
