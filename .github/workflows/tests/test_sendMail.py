@@ -1,7 +1,7 @@
 import json
 from smtplib import SMTPAuthenticationError
 import sys
-sys.path.append("..")
+sys.path.append("../../..")
 from terraform.src.sendMail import lambda_handler
 
 

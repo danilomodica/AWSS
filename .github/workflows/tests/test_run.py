@@ -1,5 +1,5 @@
 import sys
-sys.path.append("..")
+sys.path.append("../../..")
 from docker.src.run import check_string
 
 

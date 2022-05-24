@@ -9,10 +9,6 @@ on:
 permissions:
   contents: read
 
-env:
-  gmail_mail: "awss.unipv@gmail.com"
-  psw_gmail: ${{ secrets.GMAIL_PASSWORD }}
-
 jobs:
   terraform-python-test:
     name: Python test for lambdas
@@ -33,7 +29,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install flake8 pytest
-        if [ -f requirements_sendMail.txt ]; then pip install -r requirements_sendMail.txt; fi
 
     - name: Lint with flake8
       run: |
@@ -44,9 +39,12 @@ jobs:
       continue-on-error: true
 
     - name: Test with pytest
+      env:
+        gmail_mail: "awss.unipv@gmail.com"
+        psw_gmail: ${{ secrets.GMAIL_PASSWORD }}
       run: |
         pytest test_sendMail.py
-      working-directory: ${{github.workspace}}/tests/
+      working-directory: ${{github.workspace}}/.github/workflows/tests/
 
   docker-python-test:
     name: Test Python orchestrator
@@ -66,8 +64,8 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install flake8
-        if [ -f requirements_dockerRun.txt ]; then pip install -r requirements_dockerRun.txt; fi
+        pip install flake8 pytest
+        pip install -r ${{github.workspace}}/.github/workflows/requirements.txt
 
     - name: Lint with flake8
       run: |
@@ -80,7 +78,7 @@ jobs:
     - name: Test with pytest
       run: |
         pytest test_run.py
-      working-directory: ${{github.workspace}}/tests/
+      working-directory: ${{github.workspace}}/.github/workflows/tests/
 
   c-test:
     name: Build and test C code
@@ -92,14 +90,15 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Build
-      run: make
       working-directory: ${{github.workspace}}/docker/src/
+      run: |
+        make
 
     - name: Test
+      working-directory: ${{github.workspace}}/.github/workflows/tests/
       run: |
-        echo "::set-output name=check-diff::$(./c-test.sh)"
-      working-directory: ${{github.workspace}}/tests/
-      if: steps.check.outputs.triggered == 'false'
+        cp ${{github.workspace}}/docker/src/lcs .
+        if [[ $(./c-test.sh) ]]; then exit 1; else echo "Test passed"; fi
       
     - name: Upload lcs artifact
       uses: actions/upload-artifact@v3
