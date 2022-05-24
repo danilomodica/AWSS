@@ -1,0 +1,16 @@
+{
+    "rules": [
+      {
+        "rulePriority": 1,
+        "description": "Remove images when they are more than 2",
+        "selection": {
+          "tagStatus": "untagged",
+          "countType": "imageCountMoreThan",
+          "countNumber": 2
+        },
+        "action": {
+          "type": "expire"
+        }
+      }
+    ]
+}

@@ -21,6 +21,17 @@ output "ecs-repo" {
   description = "ECR Repository Name"
 }
 
+
+/*
+
+*/
+
+resource "aws_ecr_lifecycle_policy" "foopolicy" {
+  repository = aws_ecr_repository.lcs.name
+
+  policy = templatefile("./templates/LifecycleECR.json", {})
+}
+
 /* Role for ECS task definition */
 resource "aws_iam_role" "ecs-task-exec" {
   name        = "ecs-task-execution-role"
