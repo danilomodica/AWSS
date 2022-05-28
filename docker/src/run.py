@@ -3,7 +3,7 @@ import boto3
 import os
 import signal
 import re
-
+import configparser
 
 class TimeOutException(Exception):
     def __init__(self, message, errors):
@@ -24,13 +24,31 @@ def check_string(textfile):
 
 def main():
     # Define Variables 
-    AWS_REGION = "eu-central-1"
+    config = configparser.ConfigParser()
+    config_file_path = "./conf.ini"
+    config.read(config_file_path)
+
+    AWS_REGION = config["DEFAULT"]["AWS_REGION"]
+    
+    # Retrieve keys for enviroment data
+    BUCKET_IN_KEY = config["DEFAULT"]["BUCKET_IN_KEY"]
+    BUCKET_OUT_KEY = config["DEFAULT"]["BUCKET_OUT_KEY"]
+    RESULT_FILE_KEY = config["DEFAULT"]["RESULT_FILE_KEY"]
+    QUEUE_URL_KEY = config["DEFAULT"]["QUEUE_URL_KEY"]
+    FILE_1_KEY = config["DEFAULT"]["FILE_1_KEY"]
+    FILE_2_KEY = config["DEFAULT"]["FILE_2_KEY"]
+    
+    
+    FILE_1_PATH = config["DEFAULT"]["FILE_1_PATH"]
+    FILE_2_PATH = config["DEFAULT"]["FILE_2_PATH"]
+    OUTPUT_FILE_PATH = config["DEFAULT"]["OUTPUT_FILE_PATH"]
+    
     data = os.environ
     s3 = boto3.resource('s3')
-    bucket_in = s3.Bucket(data['bucket_in'])
+    bucket_in = s3.Bucket(data[BUCKET_IN_KEY])
     sqs_client = boto3.client("sqs", region_name=AWS_REGION)
-    id = data["result_file"].split(".")[0]
-    QUEUE_URL = data["queue_url"]
+    id = data[RESULT_FILE_KEY].split(".")[0]
+    QUEUE_URL = data[QUEUE_URL_KEY]
     MSG_ATTRIBUTES = {}
     msg = ""
     msg_type = 1
@@ -41,11 +59,11 @@ def main():
 
     try:
         # Read two files from S3 bucket
-        bucket_in.download_file(data['file1'], 'myfile1.txt')
-        bucket_in.download_file(data['file2'], 'myfile2.txt')
+        bucket_in.download_file(data[FILE_1_KEY], FILE_1_PATH)
+        bucket_in.download_file(data[FILE_2_KEY], FILE_2_PATH)
 
-        textfile1 = open("myfile1.txt", 'r')
-        textfile2 = open("myfile2.txt", 'r')
+        textfile1 = open(FILE_1_PATH, 'r')
+        textfile2 = open(FILE_2_PATH, 'r')
 
         # Check if files contain correct DNA characters
         if(check_string(textfile1) is False or check_string(textfile2) is False):
@@ -57,16 +75,16 @@ def main():
         else:
             textfile1.close()
             textfile2.close()
-            filename = "output_file.txt"
+            filename = OUTPUT_FILE_PATH
            
             # Execute LCS algorithm
-            check = os.system("./lcs myfile1.txt myfile2.txt 5 " + filename)
+            check = os.system(f"./lcs {FILE_1_PATH} {FILE_2_PATH} 5 " + filename)
 
             if check == 0:
                 with open(filename, "rb") as f:
                     # Store output file into S3 bucket
                     txt_data = f.read()
-                    object = s3.Object(data["bucket_out"], data["result_file"])
+                    object = s3.Object(data[BUCKET_OUT_KEY], data[RESULT_FILE_KEY])
                     object.put(Body=txt_data)
                 print("SUCCESS: Result has been stored")
             else:
