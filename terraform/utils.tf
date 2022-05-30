@@ -345,7 +345,7 @@ resource "aws_lambda_permission" "cloudwatch_reqS3_allow" {
 resource "aws_cloudwatch_log_subscription_filter" "reqS3_logfilter" {
   name            = "gets3_logsubscription"
   log_group_name  = aws_cloudwatch_log_group.reqS3LambdaLogGroup.name
-  filter_pattern  = ""
+  filter_pattern  = "ERROR"
   destination_arn = aws_lambda_function.cwl_stream_lambda.arn
 
   depends_on = [aws_lambda_permission.cloudwatch_reqS3_allow]
@@ -414,7 +414,7 @@ resource "aws_lambda_permission" "cloudwatch_sendMail_allow" {
 resource "aws_cloudwatch_log_subscription_filter" "sendMail_logfilter" {
   name            = "sendMail_logsubscription"
   log_group_name  = aws_cloudwatch_log_group.sendMailLogGroup.name
-  filter_pattern  = ""
+  filter_pattern  = "ERROR"
   destination_arn = aws_lambda_function.cwl_stream_lambda.arn
 
   depends_on = [aws_lambda_permission.cloudwatch_sendMail_allow]

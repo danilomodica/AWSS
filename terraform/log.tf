@@ -5,11 +5,11 @@ resource "aws_elasticsearch_domain" "AWSSOpenSearch" {
   cluster_config {
     zone_awareness_enabled = true
     zone_awareness_config {
-      availability_zone_count = 3
+      availability_zone_count = 2
     }
 
     instance_type  = "t3.small.elasticsearch"
-    instance_count = 3
+    instance_count = 2
   }
 
   ebs_options {
