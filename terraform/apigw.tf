@@ -514,7 +514,7 @@ resource "aws_lambda_permission" "cloudwatch_apigw_allow" {
 resource "aws_cloudwatch_log_subscription_filter" "apigw_logfilter" {
   name            = "apigw_logsubscription"
   log_group_name  = "API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.apigw.id}/${aws_api_gateway_stage.prodStage.stage_name}"
-  filter_pattern  = ""
+  filter_pattern  = "ERROR"
   destination_arn = aws_lambda_function.cwl_stream_lambda.arn
 
   depends_on = [aws_lambda_permission.cloudwatch_apigw_allow]

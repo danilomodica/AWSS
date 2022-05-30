@@ -361,7 +361,7 @@ resource "aws_lambda_permission" "cloudwatch_runEcsTask_allow" {
 resource "aws_cloudwatch_log_subscription_filter" "runEcsTask_logfilter" {
   name            = "runEcsTask_logsubscription"
   log_group_name  = aws_cloudwatch_log_group.runEcsTaskLogGroup.name
-  filter_pattern  = ""
+  filter_pattern  = "ERROR"
   destination_arn = aws_lambda_function.cwl_stream_lambda.arn
 
   depends_on = [aws_lambda_permission.cloudwatch_runEcsTask_allow]
@@ -389,7 +389,7 @@ resource "aws_lambda_permission" "cloudwatch_ecs_allow" {
 resource "aws_cloudwatch_log_subscription_filter" "ecs_logfilter" {
   name            = "ecs_logsubscription"
   log_group_name  = aws_cloudwatch_log_group.ECSLogGroup.name
-  filter_pattern  = ""
+  filter_pattern  = "ERROR"
   destination_arn = aws_lambda_function.cwl_stream_lambda.arn
 
   depends_on = [aws_lambda_permission.cloudwatch_ecs_allow]
