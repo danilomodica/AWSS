@@ -1,3 +1,5 @@
+
+/* Prior accesses configuration to aws resource from APIGW */
 /* SQS Policy */
 resource "aws_iam_policy" "sqs-policy" {
   name        = "apigw-sqsQueue"
@@ -97,12 +99,18 @@ resource "aws_api_gateway_rest_api" "apigw" {
   endpoint_configuration {
     types = ["REGIONAL"]
   }
+
+  tags = {
+    Environment = "Production"
+    Name        = "API Gateway"
+  }
 }
 
-resource "aws_api_gateway_account" "apigw-settings" {
+resource "aws_api_gateway_account" "apigw-settings" { #to connect Cloudwatch with APIGW in order to enable log groups directly
   cloudwatch_role_arn = aws_iam_role.apigateway-role.arn
 }
 
+/* Checking and validation for http request headers*/
 resource "aws_api_gateway_request_validator" "req-validator" {
   name                        = "Validate query string parameters and headers"
   rest_api_id                 = aws_api_gateway_rest_api.apigw.id
@@ -117,7 +125,7 @@ resource "aws_api_gateway_resource" "bucket-resource" {
   path_part   = "{bucket}"
 }
 
-/* API Gateway S3 Lambda GET Method */
+/* API Gateway S3 Lambda GET Method setting */
 resource "aws_api_gateway_method" "get" {
   rest_api_id   = aws_api_gateway_rest_api.apigw.id
   resource_id   = aws_api_gateway_resource.bucket-resource.id
@@ -475,15 +483,15 @@ resource "aws_api_gateway_deployment" "apigw-deployment" {
   }
 }
 
-resource "aws_api_gateway_stage" "devStage" {
+resource "aws_api_gateway_stage" "prodStage" {
   deployment_id = aws_api_gateway_deployment.apigw-deployment.id
   rest_api_id   = aws_api_gateway_rest_api.apigw.id
-  stage_name    = "dev"
+  stage_name    = "prod"
 }
 
 resource "aws_api_gateway_method_settings" "stage-settings" {
   rest_api_id = aws_api_gateway_rest_api.apigw.id
-  stage_name  = aws_api_gateway_stage.devStage.stage_name
+  stage_name  = aws_api_gateway_stage.prodStage.stage_name
   method_path = "*/*"
 
   settings {
@@ -500,12 +508,12 @@ resource "aws_lambda_permission" "cloudwatch_apigw_allow" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.cwl_stream_lambda.function_name
   principal     = "logs.${var.region}.amazonaws.com"
-  source_arn    = "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.apigw.id}/${aws_api_gateway_stage.devStage.stage_name}:*"
+  source_arn    = "arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.apigw.id}/${aws_api_gateway_stage.prodStage.stage_name}:*"
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "apigw_logfilter" {
   name            = "apigw_logsubscription"
-  log_group_name  = "API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.apigw.id}/${aws_api_gateway_stage.devStage.stage_name}"
+  log_group_name  = "API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.apigw.id}/${aws_api_gateway_stage.prodStage.stage_name}"
   filter_pattern  = ""
   destination_arn = aws_lambda_function.cwl_stream_lambda.arn
 
@@ -515,9 +523,9 @@ resource "aws_cloudwatch_log_subscription_filter" "apigw_logfilter" {
 /* Output API url in a JSON file */
 resource "local_file" "output-json" {
   depends_on = [
-    aws_api_gateway_stage.devStage
+    aws_api_gateway_stage.prodStage
   ]
 
-  content  = "{\"url\": \"${aws_api_gateway_stage.devStage.invoke_url}\"}"
+  content  = "{\"url\": \"${aws_api_gateway_stage.prodStage.invoke_url}\"}"
   filename = "../web-interface/assets/url.json"
 }

@@ -31,7 +31,7 @@ def lambda_handler(event, context):
                 "Bucket": bucket,
                 "Key": filename
             },
-            ExpiresIn=600  # 10min
+            ExpiresIn=300  # 5min
         )
     except ClientError as e:
         logging.error(e)

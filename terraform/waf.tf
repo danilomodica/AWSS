@@ -1,3 +1,4 @@
+# WEB APPLICATION FIREWALL to limit APIGW accesses
 resource "aws_wafv2_web_acl" "waf_apigw" {
   name        = "WAF-Apigw"
   description = "WAF for the API Gateway"
@@ -18,7 +19,7 @@ resource "aws_wafv2_web_acl" "waf_apigw" {
 
     statement {
       rate_based_statement {
-        limit              = 100
+        limit              = 100 # 100 requests from the same IP per 5 minutes
         aggregate_key_type = "IP"
       }
     }
@@ -30,6 +31,7 @@ resource "aws_wafv2_web_acl" "waf_apigw" {
     }
   }
 
+  #From here, AWS predefined firewall rules
   # Rule 2
   rule {
     name     = "AWS-AWSManagedRulesKnownBadInputsRuleSet"
@@ -100,7 +102,7 @@ resource "aws_wafv2_web_acl" "waf_apigw" {
   }
 
   tags = {
-    Environment = "Dev"
+    Environment = "Production"
     Name        = "WAF-Apigw"
   }
 
@@ -112,6 +114,6 @@ resource "aws_wafv2_web_acl" "waf_apigw" {
 }
 
 resource "aws_wafv2_web_acl_association" "waf_apigw_association" {
-  resource_arn = aws_api_gateway_stage.devStage.arn
+  resource_arn = aws_api_gateway_stage.prodStage.arn
   web_acl_arn  = aws_wafv2_web_acl.waf_apigw.arn
 }

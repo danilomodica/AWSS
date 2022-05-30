@@ -12,8 +12,8 @@ def lambda_handler(event, context):
         REGION = os.environ['region']
         size1 = int(msg["size1"])
         size2 = int(msg["size2"])
-        # Siccome un intero è 4 byte, la stringa 1byte per carattere, divido
-        # per un milione => dimensione matrice in MB
+        # Since an int32 is 4 bytes and a string character is 1 byte 
+        # I should dived by a million (1MB) so that the matrix is expressed in MB
         dim_matrix = (4 * size1 * size2) / 1000000
         if dim_matrix <= 400:
             FARGATE_TASK_DEF_NAME = os.environ['task_definition_name_small']
@@ -30,7 +30,7 @@ def lambda_handler(event, context):
         elif dim_matrix <= 6400:
             FARGATE_TASK_DEF_NAME = os.environ['task_definition_name_large']
             APP_NAME_FOR_OVERRIDE = os.environ['app_name_override_large']
-        elif dim_matrix <= 20000:
+        elif dim_matrix <= 24000:
             FARGATE_TASK_DEF_NAME = os.environ['task_definition_name_extra_large']
             APP_NAME_FOR_OVERRIDE = os.environ['app_name_override_extra_large']
 

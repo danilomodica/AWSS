@@ -2,25 +2,19 @@ resource "aws_elasticsearch_domain" "AWSSOpenSearch" {
   domain_name           = "awss-logs"
   elasticsearch_version = "OpenSearch_1.2"
 
-  #!!!!quando bisogna andare in production bisogna calcolare i parametri corretti per numero di nodi e spazio + eventualmente Warm and cold data storage + tipo di istanze
-
   cluster_config {
-    /*zone_awareness_enabled = true
+    zone_awareness_enabled = true
     zone_awareness_config {
       availability_zone_count = 3
-    }*/
-
-    #dedicated_master_count   = 1 #3
-    #dedicated_master_enabled = true
-    #dedicated_master_type    = "t3.small.elasticsearch"
+    }
 
     instance_type  = "t3.small.elasticsearch"
-    instance_count = 1 #6
+    instance_count = 3
   }
 
   ebs_options {
     ebs_enabled = true
-    volume_size = 10 #compute the right size depending on the expected log traffic
+    volume_size = 10
     volume_type = "gp2"
   }
 
@@ -68,7 +62,7 @@ resource "aws_elasticsearch_domain" "AWSSOpenSearch" {
 
   tags = {
     Name        = "OpenSearch AWSS Domain"
-    Environment = "Dev"
+    Environment = "Production"
   }
 
   depends_on = [data.aws_caller_identity.current]
@@ -105,7 +99,7 @@ resource "aws_lambda_function" "cwl_stream_lambda" {
 
   tags = {
     Name        = "Cloudwatch to Opensearch lambda function"
-    Environment = "Dev"
+    Environment = "Production"
   }
 }
 
@@ -114,8 +108,8 @@ resource "aws_cloudwatch_log_group" "LogsToESLogGroup" {
   retention_in_days = 7
 
   tags = {
-    Application = "Logs to ElasticSearch lambda"
-    Environment = "Dev"
+    Application = "Logs to OpenSearch lambda"
+    Environment = "Production"
   }
 }
 
@@ -137,6 +131,7 @@ resource "aws_cloudwatch_metric_alarm" "lambdaLog_alarm" {
   dimensions = { FunctionName = "${aws_lambda_function.cwl_stream_lambda.function_name}" }
 }
 
+# Policies to send logs to OpenSearch
 resource "aws_iam_role" "lambda_opensearch_execution_role" {
   name        = "lambda_opensearch_execution_role"
   description = "IAM Role for lambda used to stream to OpenSearch"

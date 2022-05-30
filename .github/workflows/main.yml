@@ -10,6 +10,7 @@ permissions:
   contents: read
 
 jobs:
+  #Tests and lints Python code for aws lambdas
   terraform-python-test:
     name: Python test for lambdas
     runs-on: ubuntu-latest
@@ -46,6 +47,7 @@ jobs:
         pytest test_sendMail.py
       working-directory: ${{github.workspace}}/.github/workflows/tests/
 
+  #Tests and lints Python code for run.py script
   docker-python-test:
     name: Test Python orchestrator
     runs-on: ubuntu-latest
@@ -80,6 +82,7 @@ jobs:
         pytest test_run.py
       working-directory: ${{github.workspace}}/.github/workflows/tests/
 
+  #Test, build and artifact creation of the lcs algorithm
   c-test:
     name: Build and test C code
     runs-on: ubuntu-latest
@@ -106,6 +109,7 @@ jobs:
         name: lcs
         path: ${{github.workspace}}/docker/src/lcs
 
+  # Build docker image and create artifact
   docker-container:
     name: Build Docker container
     runs-on: ubuntu-latest
@@ -135,7 +139,7 @@ jobs:
         name: lcs-container
         path: /tmp/lcs-container.tar
 
-
+  #FMT, Plant, Apply of Terraform code infrastructure
   terraform:
     name: 'Build Terraform infrastructure'
     needs: terraform-python-test
@@ -146,18 +150,15 @@ jobs:
       output-region: ${{ steps.apply.outputs.region }}
       output-ecr-repo: ${{ steps.apply.outputs.repository }}
 
-    # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
     defaults:
       run:
         working-directory: terraform
         shell: bash
 
     steps:
-    # Checkout the repository to the GitHub Actions runner
     - name: Checkout
       uses: actions/checkout@v3
 
-    # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
     - name: Setup Terraform
       id: setup
       uses: hashicorp/setup-terraform@v2
@@ -165,23 +166,19 @@ jobs:
         cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
         terraform_wrapper: false
 
-    # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
     - name: Terraform Init
       id: init
       run: terraform init
 
-    # Checks that all Terraform configuration files adhere to a canonical format
     - name: Terraform Format
       id: format
       run: terraform fmt -check
       continue-on-error: true
 
-    # Generates an execution plan for Terraform
     - name: Terraform Plan
       id: plan
       run: terraform plan
 
-      # On push to main, build or change infrastructure according to Terraform configuration files
     - name: Terraform Apply
       id: apply
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -190,7 +187,7 @@ jobs:
         echo "::set-output name=region::$(terraform output -raw region)"
         echo "::set-output name=repository::$(terraform output -raw ecs-repo)"
 
-
+  #Push the Docker images from artifact on AWS ECR
   deploy-ecs:
     name: Deploy image on ECS
     needs: [terraform, docker-container]

@@ -1,11 +1,11 @@
-/* S3 Bucket that contains input files to be elaborated */
+/* S3 input bucket configurations */
 resource "aws_s3_bucket" "AWSSInputFiles" {
   bucket        = "awss-input-files"
   force_destroy = true
 
   tags = {
     Name        = "Input files bucket"
-    Environment = "Dev"
+    Environment = "Production"
   }
 }
 
@@ -56,14 +56,14 @@ resource "aws_s3_bucket_lifecycle_configuration" "inputBucketLifecycle" {
   }
 }
 
-/* S3 Bucket that will contain resulting matched substrings */
+/* S3 results bucket configurations */
 resource "aws_s3_bucket" "AWSSResultFiles" {
   bucket        = "awss-result-files"
   force_destroy = true
 
   tags = {
     Name        = "Result files bucket"
-    Environment = "Dev"
+    Environment = "Production"
   }
 }
 
@@ -144,7 +144,7 @@ resource "aws_sqs_queue" "inputFIFOQueue" {
 
   tags = {
     Name        = "Input info queue"
-    Environment = "Dev"
+    Environment = "Production"
   }
 }
 
@@ -162,7 +162,7 @@ resource "aws_sqs_queue" "inputFIFOQueue_Deadletter" {
 
   tags = {
     Name        = "Input info DLQ Queue"
-    Environment = "Dev"
+    Environment = "Production"
   }
 }
 
@@ -202,7 +202,7 @@ resource "aws_sqs_queue" "sendMailQueue" {
 
   tags = {
     Name        = "Send Mail function queue"
-    Environment = "Dev"
+    Environment = "Production"
   }
 }
 
@@ -218,7 +218,7 @@ resource "aws_sqs_queue" "sendMailQueue_deadLetter" {
 
   tags = {
     Name        = "Send Mail DLQ Queue"
-    Environment = "Dev"
+    Environment = "Production"
   }
 }
 
@@ -310,7 +310,7 @@ resource "aws_lambda_function" "reqS3lambda" {
 
   tags = {
     Name        = "Url Signer function "
-    Environment = "Dev"
+    Environment = "Production"
   }
 }
 
@@ -330,7 +330,7 @@ resource "aws_cloudwatch_log_group" "reqS3LambdaLogGroup" {
 
   tags = {
     Application = "Signed url lambda"
-    Environment = "Dev"
+    Environment = "Production"
   }
 }
 
@@ -382,7 +382,7 @@ resource "aws_lambda_function" "sendMail" {
 
   tags = {
     Name        = "Send Mail function"
-    Environment = "Dev"
+    Environment = "Production"
   }
 }
 
@@ -399,7 +399,7 @@ resource "aws_cloudwatch_log_group" "sendMailLogGroup" {
 
   tags = {
     Application = "SendMail lambda"
-    Environment = "Dev"
+    Environment = "Production"
   }
 }
 

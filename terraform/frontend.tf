@@ -6,7 +6,7 @@ resource "aws_s3_bucket" "www_bucket" {
 
   tags = {
     Name        = "S3 Website"
-    Environment = "Dev"
+    Environment = "Production"
   }
 }
 
@@ -58,17 +58,17 @@ resource "aws_s3_object" "website_files" {
     aws_api_gateway_deployment.apigw-deployment,
   local_file.output-json]
 
-  for_each     = fileset(var.upload_directory, "**/*.*")
+  for_each     = fileset(var.interface_directory, "**/*.*")
   bucket       = aws_s3_bucket.www_bucket.id
-  key          = replace(each.value, var.upload_directory, "")
-  source       = "${var.upload_directory}${each.value}"
-  etag         = filemd5("${var.upload_directory}${each.value}")
+  key          = replace(each.value, var.interface_directory, "")
+  source       = "${var.interface_directory}${each.value}"
+  etag         = filemd5("${var.interface_directory}${each.value}")
   content_type = lookup(local.mime_types, regex("\\.[^.]+$", each.value), null)
 }
 
 resource "aws_s3_object" "website_json_file" { //upload json file with api invoke url, cannot be combined with above resource
   bucket       = aws_s3_bucket.www_bucket.id
-  key          = replace(local_file.output-json.filename, var.upload_directory, "")
+  key          = replace(local_file.output-json.filename, var.interface_directory, "")
   source       = local_file.output-json.filename
   etag         = md5(local_file.output-json.content)
   content_type = "application/json"
@@ -126,8 +126,8 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
     }
 
     min_ttl                = 0
-    default_ttl            = 600  # 3600
-    max_ttl                = 3600 #86400
+    default_ttl            = 3600
+    max_ttl                = 86400
     compress               = true
     viewer_protocol_policy = "redirect-to-https"
   }
@@ -146,7 +146,7 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
 
   tags = {
     Name        = "Cloudfront CDN"
-    Environment = "Dev"
+    Environment = "Production"
   }
 }
 
@@ -179,7 +179,7 @@ resource "aws_route53_record" "www" {
   zone_id = var.route_zone_id
   name    = "www.${var.website_url}"
   type    = "CNAME"
-  ttl     = "300" #3600
+  ttl     = "3600"
   records = [var.website_url]
 }
 
@@ -193,7 +193,7 @@ resource "aws_route53_health_check" "r53HealthCheck" {
 
   tags = {
     Name        = "HTTP Health Check"
-    Environment = "Dev"
+    Environment = "Production"
   }
 }
 

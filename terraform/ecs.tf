@@ -1,9 +1,15 @@
+# ECS + ECR resources
 resource "aws_ecs_cluster" "ecs-cluster" {
   name = "ecs-cluster"
 
   setting {
     name  = "containerInsights"
     value = "enabled"
+  }
+
+  tags = {
+    Environment = "Production"
+    Name        = "ECS Cluster"
   }
 }
 
@@ -12,7 +18,7 @@ resource "aws_ecr_repository" "lcs" {
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
-    scan_on_push = true
+    scan_on_push = false
   }
 }
 
@@ -21,7 +27,7 @@ output "ecs-repo" {
   description = "ECR Repository Name"
 }
 
-resource "aws_ecr_lifecycle_policy" "foopolicy" {
+resource "aws_ecr_lifecycle_policy" "ECRLifePolicy" {
   repository = aws_ecr_repository.lcs.name
 
   policy = templatefile("./templates/LifecycleECR.json", {})
@@ -39,7 +45,7 @@ resource "aws_iam_policy" "ecr-policy" {
   name        = "ECRPolicy"
   description = ""
 
-  policy = templatefile("./templates/ECRPermissions.json", {}) //cambiare eventualmente risorsa che lo può usare
+  policy = templatefile("./templates/ECRPermissions.json", {})
 }
 
 resource "aws_iam_role_policy_attachment" "ecs-task-role-policy-attachment1" {
@@ -62,7 +68,7 @@ resource "aws_iam_role" "ecs-resources-access" {
 
 resource "aws_iam_role_policy_attachment" "ecs-resources-access-role-policy-attachment1" {
   role       = aws_iam_role.ecs-resources-access.name
-  policy_arn = aws_iam_policy.ecr-policy.arn //come sopra
+  policy_arn = aws_iam_policy.ecr-policy.arn
 }
 
 resource "aws_iam_policy" "ECSbucketPolicy" {
@@ -94,7 +100,7 @@ resource "aws_iam_role_policy_attachment" "ecs-resources-access-role-policy-atta
   policy_arn = aws_iam_policy.cwlogging.arn
 }
 
-/* Definition ecs task with different sizes*/
+/* Definition ecs task with different sizes for different workloads */
 /* Small */
 resource "aws_ecs_task_definition" "ecs-task-definition-small" {
   family                = "lcs-small"
@@ -111,6 +117,11 @@ resource "aws_ecs_task_definition" "ecs-task-definition-small" {
   runtime_platform {
     operating_system_family = "LINUX"
     cpu_architecture        = "X86_64"
+  }
+
+  tags = {
+    Environment = "Production"
+    Name        = "Task Definition SMALL"
   }
 }
 
@@ -131,6 +142,11 @@ resource "aws_ecs_task_definition" "ecs-task-definition-medium-small" {
     operating_system_family = "LINUX"
     cpu_architecture        = "X86_64"
   }
+
+  tags = {
+    Environment = "Production"
+    Name        = "Task Definition MEDIUM-SMALL"
+  }
 }
 
 /* Medium*/
@@ -149,6 +165,11 @@ resource "aws_ecs_task_definition" "ecs-task-definition-medium" {
   runtime_platform {
     operating_system_family = "LINUX"
     cpu_architecture        = "X86_64"
+  }
+
+  tags = {
+    Environment = "Production"
+    Name        = "Task Definition MEDIUM"
   }
 }
 
@@ -169,6 +190,11 @@ resource "aws_ecs_task_definition" "ecs-task-definition-medium-large" {
     operating_system_family = "LINUX"
     cpu_architecture        = "X86_64"
   }
+
+  tags = {
+    Environment = "Production"
+    Name        = "Task Definition MEDIUM-LARGE"
+  }
 }
 
 /*Large*/
@@ -187,6 +213,11 @@ resource "aws_ecs_task_definition" "ecs-task-definition-large" {
   runtime_platform {
     operating_system_family = "LINUX"
     cpu_architecture        = "X86_64"
+  }
+
+  tags = {
+    Environment = "Production"
+    Name        = "Task Definition LARGE"
   }
 }
 
@@ -207,44 +238,14 @@ resource "aws_ecs_task_definition" "ecs-task-definition-extra-large" {
     operating_system_family = "LINUX"
     cpu_architecture        = "X86_64"
   }
+
+  tags = {
+    Environment = "Production"
+    Name        = "Task Definition EXTRA-LARGE"
+  }
 }
 
-/* IAM Role for RunEcsTask Lambda*/
-resource "aws_iam_role" "run-ecs-task" {
-  name        = "runEcsFargateTask-role"
-  description = "Allows Fargate to access logs, run tasks and interact with sqs queues"
-
-  assume_role_policy = templatefile("./templates/LambdaRole.json", {})
-}
-
-resource "aws_iam_policy" "ecs-lambda-policy" {
-  name        = "ECSLambdaPolicy"
-  description = "Policy to access resources from lambda (logs, ecs)"
-
-  policy = templatefile("./templates/ECSLambda.json", {
-    iam = data.aws_caller_identity.current.account_id
-    ecs = aws_iam_role.ecs-task-exec.arn
-  })
-}
-
-resource "aws_iam_policy" "SQSPollerPolicyFifo" {
-  name        = "ECSPoller"
-  description = "Policy to allow fifo queue polling actions to ecs lambda"
-
-  policy = templatefile("./templates/SQSPoller.json", { queue_name = "${aws_sqs_queue.inputFIFOQueue.name}" })
-}
-
-resource "aws_iam_role_policy_attachment" "ecs-lambda-role-policy-attachment1" {
-  role       = aws_iam_role.run-ecs-task.name
-  policy_arn = aws_iam_policy.ecs-lambda-policy.arn
-}
-
-resource "aws_iam_role_policy_attachment" "ecs-lambda-role-policy-attachment2" {
-  role       = aws_iam_role.run-ecs-task.name
-  policy_arn = aws_iam_policy.SQSPollerPolicyFifo.arn
-}
-
-# Lambda function written in Python that runs a task into ECS cluster
+# Lambda function that runs a task into ECS cluster
 data "archive_file" "runECSzip" {
   type             = "zip"
   source_file      = "${path.module}/src/runEcsTask.py"
@@ -292,8 +293,8 @@ resource "aws_lambda_function" "runEcsTask" {
   depends_on = [data.archive_file.runECSzip]
 
   tags = {
-    Name        = "Run ECS task function"
-    Environment = "Dev"
+    Name        = "Run ECS task lambda function"
+    Environment = "Production"
   }
 }
 
@@ -303,13 +304,49 @@ resource "aws_lambda_function_event_invoke_config" "runEcsRetries" {
   maximum_retry_attempts       = 2
 }
 
+/* IAM Role for RunEcsTask Lambda*/
+resource "aws_iam_role" "run-ecs-task" {
+  name        = "runEcsFargateTask-role"
+  description = "Allows Fargate to access logs, run tasks and interact with sqs queues"
+
+  assume_role_policy = templatefile("./templates/LambdaRole.json", {})
+}
+
+resource "aws_iam_policy" "ecs-lambda-policy" {
+  name        = "ECSLambdaPolicy"
+  description = "Policy to access resources from lambda (logs, ecs)"
+
+  policy = templatefile("./templates/ECSLambda.json", {
+    iam = data.aws_caller_identity.current.account_id
+    ecs = aws_iam_role.ecs-task-exec.arn
+  })
+}
+
+resource "aws_iam_policy" "SQSPollerPolicyFifo" {
+  name        = "ECSPoller"
+  description = "Policy to allow fifo queue polling actions to ecs lambda"
+
+  policy = templatefile("./templates/SQSPoller.json", { queue_name = "${aws_sqs_queue.inputFIFOQueue.name}" })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs-lambda-role-policy-attachment1" {
+  role       = aws_iam_role.run-ecs-task.name
+  policy_arn = aws_iam_policy.ecs-lambda-policy.arn
+}
+
+resource "aws_iam_role_policy_attachment" "ecs-lambda-role-policy-attachment2" {
+  role       = aws_iam_role.run-ecs-task.name
+  policy_arn = aws_iam_policy.SQSPollerPolicyFifo.arn
+}
+
+/* runECSTask lambda log group + subscription to OpenSearch */
 resource "aws_cloudwatch_log_group" "runEcsTaskLogGroup" {
   name              = "/aws/lambda/${aws_lambda_function.runEcsTask.function_name}"
   retention_in_days = 90
 
   tags = {
     Application = "runEcsTask lambda"
-    Environment = "Dev"
+    Environment = "Production"
   }
 }
 
@@ -330,13 +367,14 @@ resource "aws_cloudwatch_log_subscription_filter" "runEcsTask_logfilter" {
   depends_on = [aws_lambda_permission.cloudwatch_runEcsTask_allow]
 }
 
+/* ECR repository log group + subscription to OpenSearch */
 resource "aws_cloudwatch_log_group" "ECSLogGroup" {
   name              = "/aws/ecs/${aws_ecr_repository.lcs.name}"
   retention_in_days = 90
 
   tags = {
     Application = "ECS Cluster"
-    Environment = "Dev"
+    Environment = "Production"
   }
 }
 
