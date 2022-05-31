@@ -5,17 +5,18 @@
 [![CICD](https://github.com/domenico-rgs/AWSS/actions/workflows/main.yml/badge.svg)](https://github.com/domenico-rgs/AWSS/actions/workflows/main.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Cloud-based web application that allows to calculate, given two strings of DNA, the longest common substring.
+Cloud-based Web Application to compute the longest common substring between two DNA strings.
 
 ### Software and services used
 - [AWS](https://aws.amazon.com/)
 - [Docker](https://www.docker.com/) - version 20.10.16
 - [Bootstrap](https://getbootstrap.com/) - version 5.1.3
-- [Terraform](https://www.terraform.io/) - CLI version 1.2.0 • provider hashicorp/aws v4.15.0
+- [Terraform](https://www.terraform.io/) - CLI version 1.2.1 • provider hashicorp/aws v4.16.0
 
 ### Programming languages used
 - C - version C11
 - [Python](https://www.python.org/) - version 3.9
+- JavaScript
 - [Node.js](https://nodejs.org/it/) - version 14.x
 
 ## Setting up
@@ -23,24 +24,37 @@ Various settings can be changed by modifying the file **main.tf**
 
 In particular they are:
 
-* *region* : specify the aws region where you want to deploy the infrastructure
-* *service_name*: name of the service, awss in this case
-* *website_url* url of the website that will host the webapp
-* *email* : gmail email used to send notification to the user at the end of a computation (you can change provider in src/sendMail.py code)
-* *certificate related variables* : variables related to the website certificates for www and non-www domains
-* *masterPass* and *masterName*: are the credentials to access to the OpenSearch dashboard
+* *region* : the AWS region where you want to deploy the infrastructure <br>
+Note: the region must be modified even in the *conf.ini* file present in the *docker* folder
+* *service_name*: the name of the service, awss in our case
+* *website_url*: the URL of the website that will host the webapp
+* *email* : the Gmail email used to send notification to the user at the end of a computation (you can change the provider by editing the code in src/sendMail.py)
+* *acm_certificate_arn* and *route_zone_id* : variables related to the website certificate and the id of the hosted zone in AWS Route53
+* *masterPass* and *masterName*: the credentials to access to the OpenSearch dashboard
+
+Other variables values, such as passwords, will be asked during the deployment.
 
 ## Infrastructure building
-After changing the settings according to your preferences, to run the terraform code in order to build the whole infrastructure, open a terminal and run the following commands.
+Three possible ways to deploy the infrastructure:
+
+1. After changing the settings according to your preferences, run the Terraform code on Terraform Cloud by opening a terminal on the project folder and running the following commands:
 
 ```console
 $ cd terraform
+$ terraform login
 $ terraform init
 $ terraform apply -auto-approve
 ```
 
-At the third step you will be asked to insert your AWS access key and secret key.
+2. If you want to deploy the infrastructure locally, delete the "cloud" block within the *terraform* statement on *main.tf*, then simply run:
 
-After executing the commands above the output will be the DNS nameservers to be set on your domain registrar in order to have access to the web interface and the url of the OpenSearch dashboard used to look at the logs.
+```console
+$ terraform init
+$ terraform apply -auto-approve
+```
 
-[//]: <> (Aggiungere spiegazioni su avvio container e/o pipeline se non automatizzati e eventualmente login su terraform cloud)
+3. Use GitHub Actions to automatically deploy the infrastructure: see our documented workflow in the .github folder 
+
+Note: during the deployment, you will be asked to insert your AWS access key and secret key, your Gmail and OpenSearch passwords. You can set these variables on Terraform Cloud dashboard or on a *.tfvars* file, so that they will not be asked every time.
+    
+After infrastructure deployment, the outputs will be the DNS nameservers to be set on your Domain Registrar in order to have access to the Web interface and the URL of the OpenSearch dashboard used to watch the logs.
