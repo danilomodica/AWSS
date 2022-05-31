@@ -3,8 +3,18 @@ name: CICD
 on:
   push:
     branches: [ main ]
+    paths:
+      - docker/**
+      - terraform/**
+      - web-interface/**
+      - .github/workflows/**
   pull_request:
     branches: [ main ]
+    paths:
+      - docker/**
+      - terraform/**
+      - web-interface/**
+      - .github/workflows/**
 
 permissions:
   contents: read
