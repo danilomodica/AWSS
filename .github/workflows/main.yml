@@ -22,7 +22,7 @@ permissions:
 jobs:
   #Tests and lints Python code for aws lambdas
   terraform-python-test:
-    name: Python test for lambdas
+    name: Lambda tests
     runs-on: ubuntu-latest
     environment: Production
 
@@ -59,7 +59,7 @@ jobs:
 
   #Tests and lints Python code for run.py script
   docker-python-test:
-    name: Test Python orchestrator
+    name: Test container script
     runs-on: ubuntu-latest
     environment: Production
 
@@ -121,7 +121,7 @@ jobs:
 
   # Build docker image and create artifact
   docker-container:
-    name: Build Docker container
+    name: Build Docker image
     runs-on: ubuntu-latest
     needs: [c-test,docker-python-test]
     environment: Production
@@ -151,7 +151,7 @@ jobs:
 
   #FMT, Plant, Apply of Terraform code infrastructure
   terraform:
-    name: 'Build Terraform infrastructure'
+    name: 'Terraform deploy'
     needs: terraform-python-test
     runs-on: ubuntu-latest
     environment: Production
@@ -199,7 +199,7 @@ jobs:
 
   #Push the Docker images from artifact on AWS ECR
   deploy-ecs:
-    name: Deploy image on ECS
+    name: Deploy image on ECR
     needs: [terraform, docker-container]
     runs-on: ubuntu-latest
     environment: Production
